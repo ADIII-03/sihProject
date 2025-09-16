@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic"; // ensures this API runs on server
+
 import { type NextRequest, NextResponse } from "next/server"
 
 export async function GET(request: NextRequest) {

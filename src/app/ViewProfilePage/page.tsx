@@ -5,20 +5,10 @@ import mapboxgl from "mapbox-gl"
 import "mapbox-gl/dist/mapbox-gl.css"
 import { Button } from "@/components/ui/button"
 import { motion } from "framer-motion"
-import {
-  ResponsiveContainer,
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  AreaChart,
-  Area,
-  BarChart,
-  Bar,
-} from "recharts"
+import dynamic from "next/dynamic"
+import type { PlotParams } from "react-plotly.js"
+
+const Plot = dynamic<PlotParams>(() => import("react-plotly.js"), { ssr: false })
 
 mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN as string
 
@@ -48,6 +38,7 @@ export default function ViewProfilePage() {
     { id: "pressure", name: "Pressure", icon: "⚡" },
   ]
 
+  // Initialize map for location mode
   useEffect(() => {
     if (mode === "location" && mapContainerRef.current && !mapRef.current) {
       mapRef.current = new mapboxgl.Map({
@@ -76,56 +67,24 @@ export default function ViewProfilePage() {
     )
   }
 
+
   const handleSubmit = async () => {
     setIsLoading(true)
     try {
-      let body: any = {}
-
-      if (mode === "float") {
-        body = { floatId, cycleNumber, parameters: selectedParams, depthRange, startDate, endDate }
-        const res = await fetch("/api/queryFloat", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body),
-        })
-        const data = await res.json();
-const chartRows = data?.data || [];
-
-const formattedChartData = chartRows.map((d: any) => ({
-  depth: d.pressure, // x-axis
-  temperature: d.temperature,
-  salinity: d.salinity,
-  pressure: d.pressure,
-}));
-
-setChartData(formattedChartData);
-
-      } else if (mode === "location" && lat && lng) {
-        body = { latitude: lat, longitude: lng, parameters: selectedParams, depthRange, startDate, endDate }
-        const res = await fetch("/api/queryLocation", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body),
-        })
-        const data = await res.json();
-const chartRows = data?.data || [];
-
-const formattedChartData = chartRows.map((d: any) => ({
-  depth: d.pressure, // x-axis
-  temperature: d.temperature,
-  salinity: d.salinity,
-  pressure: d.pressure,
-}));
-
-setChartData(formattedChartData);
-
-      }
+      // Example: Replace with API calls if needed
+      // For now we just keep dummyData
+      console.log("Fetch simulated data")
     } catch (error) {
       console.error("❌ Error fetching profile:", error)
     } finally {
       setIsLoading(false)
     }
   }
+
+  // Filtered data based on depthRange
+  const filteredChartData = chartData.filter(
+    (d) => d.depth >= depthRange[0] && d.depth <= depthRange[1]
+  )
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto px-3 sm:px-6">
@@ -153,7 +112,6 @@ setChartData(formattedChartData);
           {mode === "float" ? "🌊 View by Float ID" : "📍 View by Location"}
         </h2>
 
-        {/* FLOAT MODE */}
         {mode === "float" && (
           <div className="space-y-3">
             <input
@@ -173,7 +131,6 @@ setChartData(formattedChartData);
           </div>
         )}
 
-        {/* LOCATION MODE */}
         {mode === "location" && (
           <div className="space-y-3">
             <div ref={mapContainerRef} className="h-60 sm:h-72 w-full rounded-xl border" />
@@ -183,43 +140,54 @@ setChartData(formattedChartData);
           </div>
         )}
 
-        {/* Filters */}
-   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-5">
-  <div className="flex flex-col">
-    <label className="text-sm font-medium mb-1">Start Date</label>
-    <input
-      type="date"
-      value={startDate}
-      onChange={(e) => setStartDate(e.target.value)}
-      className="w-full px-3 py-2 border rounded-lg text-base sm:text-sm appearance-none"
-    />
-  </div>
-
-  <div className="flex flex-col">
-    <label className="text-sm font-medium mb-1">End Date</label>
-    <input
-      type="date"
-      value={endDate}
-      onChange={(e) => setEndDate(e.target.value)}
-      className="w-full px-3 py-2 border rounded-lg text-base sm:text-sm appearance-none"
-    />
-  </div>
-</div>
-
-
-        <div className="mt-4">
-          <input
-            type="range"
-            min="0"
-            max="2000"
-            step="50"
-            value={depthRange[0]}
-            onChange={(e) => setDepthRange([Number(e.target.value), depthRange[1]])}
-            className="w-full accent-primary"
-          />
-          <p className="text-sm">Depth: {depthRange[0]} – {depthRange[1]} m</p>
+        {/* Date Filters */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-5">
+          <div className="flex flex-col">
+            <label className="text-sm font-medium mb-1">Start Date</label>
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="w-full px-3 py-2 border rounded-lg text-base sm:text-sm appearance-none"
+            />
+          </div>
+          <div className="flex flex-col">
+            <label className="text-sm font-medium mb-1">End Date</label>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="w-full px-3 py-2 border rounded-lg text-base sm:text-sm appearance-none"
+            />
+          </div>
         </div>
 
+        {/* Depth Range */}
+        <div className="mt-4 space-y-2">
+          <label className="text-sm font-medium">Depth Range (m)</label>
+          <div className="flex items-center gap-2">
+            <input
+              type="number"
+              min={0}
+              max={depthRange[1]}
+              value={depthRange[0]}
+              onChange={(e) => setDepthRange([Number(e.target.value), depthRange[1]])}
+              className="w-20 px-2 py-1 border rounded"
+            />
+            <span>–</span>
+            <input
+              type="number"
+              min={depthRange[0]}
+              max={2000}
+              value={depthRange[1]}
+              onChange={(e) => setDepthRange([depthRange[0], Number(e.target.value)])}
+              className="w-20 px-2 py-1 border rounded"
+            />
+          </div>
+          <p className="text-sm">Showing depth {depthRange[0]} – {depthRange[1]} m</p>
+        </div>
+
+        {/* Parameters */}
         <div className="mt-5 space-y-2">
           {parameters.map((param) => (
             <label key={param.id} className="flex items-center gap-2 text-sm">
@@ -233,16 +201,12 @@ setChartData(formattedChartData);
           ))}
         </div>
 
+        {/* Submit Button */}
         <div className="mt-6">
           <Button
             onClick={handleSubmit}
             className="w-full sm:w-auto"
-            disabled={
-              isLoading ||
-              selectedParams.length === 0 ||
-              (mode === "float" && !floatId.trim()) ||
-              (mode === "location" && (!lat || !lng))
-            }
+            disabled={isLoading || selectedParams.length === 0}
           >
             {isLoading ? "Fetching..." : "Fetch Profile"}
           </Button>
@@ -254,19 +218,22 @@ setChartData(formattedChartData);
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
           <h3 className="text-lg sm:text-xl font-bold">📊 Visualization</h3>
           <div className="flex gap-2 w-full sm:w-auto">
-            <Button size="sm" className="flex-1 sm:flex-none"
+            <Button
+              size="sm"
               variant={visualType === "line" ? "default" : "outline"}
               onClick={() => setVisualType("line")}
             >
               📈 Line
             </Button>
-            <Button size="sm" className="flex-1 sm:flex-none"
+            <Button
+              size="sm"
               variant={visualType === "area" ? "default" : "outline"}
               onClick={() => setVisualType("area")}
             >
               🌊 Area
             </Button>
-            <Button size="sm" className="flex-1 sm:flex-none"
+            <Button
+              size="sm"
               variant={visualType === "bar" ? "default" : "outline"}
               onClick={() => setVisualType("bar")}
             >
@@ -274,132 +241,76 @@ setChartData(formattedChartData);
             </Button>
           </div>
         </div>
-{chartData.length > 0 ? (
-  <motion.div
-    key={visualType}
-    initial={{ opacity: 0, y: 20 }}
-    animate={{ opacity: 1, y: 0 }}
-    transition={{ duration: 0.4 }}
-  >
-    {/* 📊 Line Chart */}
-    {visualType === "line" && (
-      <div style={{ width: "100%", height: 384 }}>
-        <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={chartData} layout="vertical">
-            <CartesianGrid strokeDasharray="3 3" stroke="#444" />
-            <XAxis type="number" stroke="#aaa" />
-            <YAxis
-              dataKey="depth"
-              type="number"
-              reversed
-              stroke="#aaa"
-            />
-            <Tooltip
-              contentStyle={{ backgroundColor: "#1e1e1e", border: "1px solid #444" }}
-              labelStyle={{ color: "#ddd" }}
-              itemStyle={{ color: "#fff" }}
-            />
-            <Legend wrapperStyle={{ color: "#ccc" }} />
-            {selectedParams.includes("temperature") && (
-              <Line dataKey="temperature" stroke="#ff7300" dot={false} />
-            )}
-            {selectedParams.includes("salinity") && (
-              <Line dataKey="salinity" stroke="#4da6ff" dot={false} />
-            )}
-            {selectedParams.includes("pressure") && (
-              <Line dataKey="pressure" stroke="#00c49f" dot={false} />
-            )}
-          </LineChart>
-        </ResponsiveContainer>
-      </div>
-    )}
 
-    {/* 📊 Area Chart */}
-    {visualType === "area" && (
-      <div style={{ width: "100%", height: 384 }}>
-        <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={chartData} layout="vertical">
-            <CartesianGrid strokeDasharray="3 3" stroke="#444" />
-            <XAxis type="number" stroke="#aaa" />
-            <YAxis
-              dataKey="depth"
-              type="number"
-              reversed
-              stroke="#aaa"
+        {chartData.length > 0 ? (
+          <motion.div
+            key={visualType}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+          >
+            <Plot
+              data={[
+                ...(selectedParams.includes("temperature")
+                  ? [{
+                      x: filteredChartData.map(d => d.temperature),
+                      y: filteredChartData.map(d => d.depth),
+                      type: (visualType === "bar" ? "bar" : "scatter") as "scatter" | "bar",
+                      mode: visualType === "line" ? "lines" : "markers",
+                      orientation: visualType === "bar" ? "h" : undefined,
+                      fill: visualType === "area" ? "tozerox" : "none",
+                      name: "Temperature",
+                      line: { color: "#ff7300" },
+                      marker: { color: "#ff7300" },
+                    }]
+                  : []),
+                ...(selectedParams.includes("salinity")
+                  ? [{
+                      x: filteredChartData.map(d => d.salinity),
+                      y: filteredChartData.map(d => d.depth),
+                      type: visualType === "bar" ? "bar" : "scatter",
+                      mode: visualType === "line" ? "lines" : "markers",
+                      orientation: visualType === "bar" ? "h" : undefined,
+                      fill: visualType === "area" ? "tozerox" : "none",
+                      name: "Salinity",
+                      line: { color: "#4da6ff" },
+                      marker: { color: "#4da6ff" },
+                    }]
+                  : []),
+                ...(selectedParams.includes("pressure")
+                  ? [{
+                      x: filteredChartData.map(d => d.pressure),
+                      y: filteredChartData.map(d => d.depth),
+                      type: visualType === "bar" ? "bar" : "scatter",
+                      mode: visualType === "line" ? "lines" : "markers",
+                      orientation: visualType === "bar" ? "h" : undefined,
+                      fill: visualType === "area" ? "tozerox" : "none",
+                      name: "Pressure",
+                      line: { color: "#00c49f" },
+                      marker: { color: "#00c49f" },
+                    }]
+                  : []),
+              ]}
+              layout={{
+                autosize: true,
+                height: 400,
+                paper_bgcolor: "transparent",
+                plot_bgcolor: "transparent",
+                font: { color: "#ddd" },
+                xaxis: { title: "Value", gridcolor: "#444" },
+                yaxis: { title: "Depth (m)", autorange: "reversed", gridcolor: "#444" },
+                legend: { font: { color: "#ccc" } },
+                margin: { l: 60, r: 20, t: 30, b: 50 },
+              }}
+              style={{ width: "100%", height: "100%" }}
+              config={{ responsive: true }}
             />
-            <Tooltip
-              contentStyle={{ backgroundColor: "#1e1e1e", border: "1px solid #444" }}
-              labelStyle={{ color: "#ddd" }}
-              itemStyle={{ color: "#fff" }}
-            />
-            <Legend wrapperStyle={{ color: "#ccc" }} />
-            {selectedParams.includes("temperature") && (
-              <Area
-                dataKey="temperature"
-                stroke="#ff7300"
-                fill="#ffb380"
-                type="monotone"
-              />
-            )}
-            {selectedParams.includes("salinity") && (
-              <Area
-                dataKey="salinity"
-                stroke="#4da6ff"
-                fill="#80c6ff"
-                type="monotone"
-              />
-            )}
-            {selectedParams.includes("pressure") && (
-              <Area
-                dataKey="pressure"
-                stroke="#00c49f"
-                fill="#80ffe0"
-                type="monotone"
-              />
-            )}
-          </AreaChart>
-        </ResponsiveContainer>
-      </div>
-    )}
-
-    {/* 📊 Bar Chart */}
-    {visualType === "bar" && (
-      <div style={{ width: "100%", height: 384 }}>
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={chartData} layout="vertical">
-            <CartesianGrid strokeDasharray="3 3" stroke="#444" />
-            <XAxis type="number" stroke="#aaa" />
-            <YAxis
-              dataKey="depth"
-              type="number"
-              reversed
-              stroke="#aaa"
-            />
-            <Tooltip
-              contentStyle={{ backgroundColor: "#1e1e1e", border: "1px solid #444" }}
-              labelStyle={{ color: "#ddd" }}
-              itemStyle={{ color: "#fff" }}
-            />
-            <Legend wrapperStyle={{ color: "#ccc" }} />
-            {selectedParams.includes("temperature") && (
-              <Bar dataKey="temperature" fill="#ff7300" />
-            )}
-            {selectedParams.includes("salinity") && (
-              <Bar dataKey="salinity" fill="#4da6ff" />
-            )}
-            {selectedParams.includes("pressure") && (
-              <Bar dataKey="pressure" fill="#00c49f" />
-            )}
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
-    )}
-  </motion.div>
-) : (
-  <p className="text-muted-foreground text-sm">
-    Select filters and fetch profile to view chart
-  </p>
-)}
+          </motion.div>
+        ) : (
+          <p className="text-muted-foreground text-sm">
+            Select filters and fetch profile to view chart
+          </p>
+        )}
       </div>
     </div>
   )

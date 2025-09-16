@@ -5,24 +5,14 @@ import mapboxgl from "mapbox-gl"
 import "mapbox-gl/dist/mapbox-gl.css"
 import { Button } from "@/components/ui/button"
 import { motion } from "framer-motion"
-import {
-  ResponsiveContainer,
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  AreaChart,
-  Area,
-  BarChart,
-  Bar,
-} from "recharts"
+import dynamic from "next/dynamic"
+
+const Plot = dynamic(() => import("react-plotly.js"), { ssr: false })
 
 mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN as string
 
 export default function ComparePage() {
+  // ------------------- STATE -------------------
   const [mode, setMode] = useState<"float" | "location">("float")
   const [firstFloat, setFirstFloat] = useState("")
   const [secondFloat, setSecondFloat] = useState("")
@@ -57,12 +47,14 @@ export default function ComparePage() {
     { id: "pressure", name: "Pressure", icon: "⚡" },
   ]
 
+  // ------------------- EFFECTS -------------------
   useEffect(() => {
     setIsClient(true)
   }, [])
 
   useEffect(() => {
     if (mode === "location") {
+      // First Map
       if (firstMapContainerRef.current && !firstMapRef.current) {
         firstMapRef.current = new mapboxgl.Map({
           container: firstMapContainerRef.current,
@@ -80,6 +72,7 @@ export default function ComparePage() {
             .addTo(firstMapRef.current!)
         })
       }
+      // Second Map
       if (secondMapContainerRef.current && !secondMapRef.current) {
         secondMapRef.current = new mapboxgl.Map({
           container: secondMapContainerRef.current,
@@ -100,11 +93,47 @@ export default function ComparePage() {
     }
   }, [mode])
 
+  // ------------------- HANDLERS -------------------
   const handleParamToggle = (paramId: string) => {
     setSelectedParams((prev) =>
       prev.includes(paramId) ? prev.filter((p) => p !== paramId) : [...prev, paramId]
     )
   }
+
+  // Add this useEffect after your state declarations
+useEffect(() => {
+  // Dummy data for testing
+  const dummyFirstData = Array.from({ length: 20 }, (_, i) => ({
+    depth: i * 100,
+    temperature: 10 + Math.random() * 5,
+    salinity: 34 + Math.random(),
+    pressure: i * 10,
+  }));
+
+  const dummySecondData = Array.from({ length: 20 }, (_, i) => ({
+    depth: i * 100,
+    temperature: 12 + Math.random() * 5,
+    salinity: 35 + Math.random(),
+    pressure: i * 10 + 5,
+  }));
+
+  setFirstData(dummyFirstData);
+  setSecondData(dummySecondData);
+
+  // Dummy float IDs
+  setFirstFloat("FLOAT-001");
+  setSecondFloat("FLOAT-002");
+
+  // Dummy location
+  setFirstLat(20);
+  setFirstLng(78);
+  setSecondLat(22);
+  setSecondLng(80);
+
+  // Set default depth range
+  setDepthRange([0, 2000]);
+}, []);
+
 
   const handleSubmit = async () => {
     setIsLoading(true)
@@ -157,12 +186,9 @@ export default function ComparePage() {
     }
   }
 
-  // ---------- NEW: Proper overlay alignment by depth ----------
-  // Build a Map keyed by numeric depth so values align correctly, even if depths differ
+  // ------------------- DATA PREP -------------------
   const buildOverlayMap = () => {
     const m = new Map<number, any>()
-
-    // Helper: ensure numeric depth exists and skip invalid
     const push = (src: any, prefix: "first" | "second") => {
       if (!src) return
       const depth = Number(src.depth ?? src.pres ?? src.pressure ?? src.m_pres)
@@ -182,181 +208,129 @@ export default function ComparePage() {
 
     firstData.forEach((d) => push(d, "first"))
     secondData.forEach((d) => push(d, "second"))
-
-    // Return sorted array by numeric depth ascending
     return Array.from(m.values()).sort((a, b) => a.depth - b.depth)
   }
 
-  // returns overlay data; if forBar = true, convert depth to string so Recharts treats it categorical
-  const getOverlayData = (forBar = false) => {
-    const arr = buildOverlayMap()
-    if (forBar) {
-      return arr.map((r) => ({ ...r, depth: String(r.depth) })) // depth as category
-    }
-    return arr
-  }
-  // ---------- end overlay helpers ----------
+  const getOverlayData = () => buildOverlayMap()
 
-  // Helper to get chart-specific axis props
-  const renderOverlayChart = () => {
-    const overlayForBar = visualType === "bar"
-    const data = getOverlayData(overlayForBar)
-
-    if (visualType === "line") {
-      return (
-        <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={data} layout="vertical">
-            <CartesianGrid strokeDasharray="3 3" stroke="#444" />
-            <XAxis type="number" stroke="#aaa" />
-            <YAxis dataKey="depth" type="number" reversed stroke="#aaa" />
-            <Tooltip contentStyle={{ backgroundColor: "#1e1e1e", border: "1px solid #444" }} labelStyle={{ color: "#ddd" }} itemStyle={{ color: "#fff" }} />
-            <Legend wrapperStyle={{ color: "#ccc" }} />
-            {selectedParams.includes("temperature") && (
-              <>
-                <Line dataKey="firstTemperature" stroke="#ff7300" dot={false} name="First Temp" />
-                <Line dataKey="secondTemperature" stroke="#0088fe" dot={false} name="Second Temp" />
-              </>
-            )}
-            {selectedParams.includes("salinity") && (
-              <>
-                <Line dataKey="firstSalinity" stroke="#ff7f50" dot={false} name="First Salinity" />
-                <Line dataKey="secondSalinity" stroke="#1f78b4" dot={false} name="Second Salinity" />
-              </>
-            )}
-            {selectedParams.includes("pressure") && (
-              <>
-                <Line dataKey="firstPressure" stroke="#00c49f" dot={false} name="First Pressure" />
-                <Line dataKey="secondPressure" stroke="#006644" dot={false} name="Second Pressure" />
-              </>
-            )}
-          </LineChart>
-        </ResponsiveContainer>
-      )
-    }
-
-    if (visualType === "area") {
-      return (
-        <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={data} layout="vertical">
-            <CartesianGrid strokeDasharray="3 3" stroke="#444" />
-            <XAxis type="number" stroke="#aaa" />
-            <YAxis dataKey="depth" type="number" reversed stroke="#aaa" />
-            <Tooltip contentStyle={{ backgroundColor: "#1e1e1e", border: "1px solid #444" }} labelStyle={{ color: "#ddd" }} itemStyle={{ color: "#fff" }} />
-            <Legend wrapperStyle={{ color: "#ccc" }} />
-            {selectedParams.includes("temperature") && (
-              <>
-                <Area dataKey="firstTemperature" stroke="#ff7300" fill="#ffb380" type="monotone" name="First Temp" />
-                <Area dataKey="secondTemperature" stroke="#0088fe" fill="#80c6ff" type="monotone" name="Second Temp" />
-              </>
-            )}
-            {selectedParams.includes("salinity") && (
-              <>
-                <Area dataKey="firstSalinity" stroke="#ff7f50" fill="#ffd1c2" type="monotone" name="First Salinity" />
-                <Area dataKey="secondSalinity" stroke="#1f78b4" fill="#cfe8ff" type="monotone" name="Second Salinity" />
-              </>
-            )}
-            {selectedParams.includes("pressure") && (
-              <>
-                <Area dataKey="firstPressure" stroke="#00c49f" fill="#a6f3df" type="monotone" name="First Pressure" />
-                <Area dataKey="secondPressure" stroke="#006644" fill="#9fe6c7" type="monotone" name="Second Pressure" />
-              </>
-            )}
-          </AreaChart>
-        </ResponsiveContainer>
-      )
-    }
-
-    // BAR
-    return (
-      <ResponsiveContainer width="100%" height="100%">
-        {/* For BarChart with layout="vertical", Recharts expects Y to be categorical.
-            getOverlayData(true) already stringifies depth when forBar=true. */}
-        <BarChart data={data} layout="vertical">
-          <CartesianGrid strokeDasharray="3 3" stroke="#444" />
-          <XAxis type="number" stroke="#aaa" />
-          <YAxis dataKey="depth" type="category" stroke="#aaa" />
-          <Tooltip contentStyle={{ backgroundColor: "#1e1e1e", border: "1px solid #444" }} labelStyle={{ color: "#ddd" }} itemStyle={{ color: "#fff" }} />
-          <Legend wrapperStyle={{ color: "#ccc" }} />
-          {selectedParams.includes("temperature") && (
-            <>
-              <Bar dataKey="firstTemperature" fill="#ff7300" name="First Temp" />
-              <Bar dataKey="secondTemperature" fill="#0088fe" name="Second Temp" />
-            </>
-          )}
-          {selectedParams.includes("salinity") && (
-            <>
-              <Bar dataKey="firstSalinity" fill="#ff7f50" name="First Salinity" />
-              <Bar dataKey="secondSalinity" fill="#1f78b4" name="Second Salinity" />
-            </>
-          )}
-          {selectedParams.includes("pressure") && (
-            <>
-              <Bar dataKey="firstPressure" fill="#00c49f" name="First Pressure" />
-              <Bar dataKey="secondPressure" fill="#006644" name="Second Pressure" />
-            </>
-          )}
-        </BarChart>
-      </ResponsiveContainer>
+  const generatePlotlyTraces = (overlay: boolean) => {
+    const traces: any[] = []
+    const data = getOverlayData().filter(
+      (d) => d.depth >= depthRange[0] && d.depth <= depthRange[1]
     )
+    selectedParams.forEach((param) => {
+      if (param === "temperature") {
+        traces.push({
+          y: data.map((d) => d.depth),
+          x: data.map((d) => overlay ? d.firstTemperature : firstData.map((fd) => fd.temperature)),
+          type: visualType,
+          mode: visualType === "line" ? "lines" :
+           undefined,
+            fill: visualType === "area" ? "tozerox" : "none",
+          name: "First Temp",
+        })
+        traces.push({
+          y: data.map((d) => d.depth),
+          x: data.map((d) => overlay ? d.secondTemperature : secondData.map((sd) => sd.temperature)),
+          type: visualType,
+          mode: visualType === "line" ? "lines" : undefined,
+           fill: visualType === "area" ? "tozerox" : undefined,
+          name: "Second Temp",
+        })
+      }
+      if (param === "salinity") {
+        traces.push({
+          y: data.map((d) => d.depth),
+          x: data.map((d) => overlay ? d.firstSalinity : firstData.map((fd) => fd.salinity)),
+          type: visualType,
+          mode: visualType === "line" ? "lines" : undefined,
+            fill: visualType === "area" ? "tozerox" : undefined,
+          name: "First Salinity",
+        })
+        traces.push({
+          y: data.map((d) => d.depth),
+          x: data.map((d) => overlay ? d.secondSalinity : secondData.map((sd) => sd.salinity)),
+          type: visualType,
+          mode: visualType === "line" ? "lines" : undefined,
+            fill: visualType === "area" ? "tozerox" : undefined,
+          name: "Second Salinity",
+        })
+      }
+      if (param === "pressure") {
+        traces.push({
+          y: data.map((d) => d.depth),
+          x: data.map((d) => overlay ? d.firstPressure : firstData.map((fd) => fd.pressure)),
+          type: visualType,
+          mode: visualType === "line" ? "lines" : undefined,
+            fill: visualType === "area" ? "tozerox" : undefined,
+          name: "First Pressure",
+        })
+        traces.push({
+          y: data.map((d) => d.depth),
+          x: data.map((d) => overlay ? d.secondPressure : secondData.map((sd) => sd.pressure)),
+          type: visualType,
+          mode: visualType === "line" ? "lines" : undefined,
+            fill: visualType === "area" ? "tozerox" : undefined,
+          name: "Second Pressure",
+        })
+      }
+    })
+    return traces
   }
 
-  // Side-by-side single-plot render (firstData or secondData)
-  const renderSingleChart = (data: any[], index: number) => {
-    // For Bar charts, convert depth to string for categorical Y
-    const forBar = visualType === "bar"
-    const plotData = forBar ? data.map((d) => ({ ...d, depth: String(d.depth) })) : data
-
-    if (visualType === "line") {
-      return (
-        <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={plotData} layout="vertical">
-            <CartesianGrid strokeDasharray="3 3" stroke="#444" />
-            <XAxis type="number" stroke="#aaa" />
-            <YAxis dataKey="depth" type="number" reversed stroke="#aaa" />
-            <Tooltip contentStyle={{ backgroundColor: "#1e1e1e", border: "1px solid #444" }} labelStyle={{ color: "#ddd" }} itemStyle={{ color: "#fff" }} />
-            <Legend wrapperStyle={{ color: "#ccc" }} />
-            {selectedParams.includes("temperature") && <Line dataKey="temperature" stroke="#ff7300" dot={false} />}
-            {selectedParams.includes("salinity") && <Line dataKey="salinity" stroke="#4da6ff" dot={false} />}
-            {selectedParams.includes("pressure") && <Line dataKey="pressure" stroke="#00c49f" dot={false} />}
-          </LineChart>
-        </ResponsiveContainer>
-      )
-    }
-
-    if (visualType === "area") {
-      return (
-        <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={plotData} layout="vertical">
-            <CartesianGrid strokeDasharray="3 3" stroke="#444" />
-            <XAxis type="number" stroke="#aaa" />
-            <YAxis dataKey="depth" type="number" reversed stroke="#aaa" />
-            <Tooltip contentStyle={{ backgroundColor: "#1e1e1e", border: "1px solid #444" }} labelStyle={{ color: "#ddd" }} itemStyle={{ color: "#fff" }} />
-            <Legend wrapperStyle={{ color: "#ccc" }} />
-            {selectedParams.includes("temperature") && <Area dataKey="temperature" stroke="#ff7300" fill="#ffb380" type="monotone" />}
-            {selectedParams.includes("salinity") && <Area dataKey="salinity" stroke="#4da6ff" fill="#80c6ff" type="monotone" />}
-            {selectedParams.includes("pressure") && <Area dataKey="pressure" stroke="#00c49f" fill="#80ffe0" type="monotone" />}
-          </AreaChart>
-        </ResponsiveContainer>
-      )
-    }
-
-    // BAR single
-    return (
-      <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={plotData} layout="vertical">
-          <CartesianGrid strokeDasharray="3 3" stroke="#444" />
-          <XAxis type="number" stroke="#aaa" />
-          <YAxis dataKey="depth" type="category" stroke="#aaa" />
-          <Tooltip contentStyle={{ backgroundColor: "#1e1e1e", border: "1px solid #444" }} labelStyle={{ color: "#ddd" }} itemStyle={{ color: "#fff" }} />
-          <Legend wrapperStyle={{ color: "#ccc" }} />
-          {selectedParams.includes("temperature") && <Bar dataKey="temperature" fill="#ff7300" />}
-          {selectedParams.includes("salinity") && <Bar dataKey="salinity" fill="#4da6ff" />}
-          {selectedParams.includes("pressure") && <Bar dataKey="pressure" fill="#00c49f" />}
-        </BarChart>
-      </ResponsiveContainer>
+  const generateSingleTraces = (dataSet: any[]) => {
+    const traces: any[] = []
+    const data = dataSet.filter(
+      (d) => d.depth >= depthRange[0] && d.depth <= depthRange[1]
     )
+    selectedParams.forEach((param) => {
+      if (param === "temperature") {
+        traces.push({
+          y: data.map((d) => d.depth),
+          x: data.map((d) => d.temperature),
+          type: visualType,
+          mode: visualType === "line" ? "lines" : undefined,
+            fill: visualType === "area" ? "tozerox" : undefined,
+          name: "Temperature",
+        })
+      }
+      if (param === "salinity") {
+        traces.push({
+          y: data.map((d) => d.depth),
+          x: data.map((d) => d.salinity),
+          type: visualType,
+          mode: visualType === "line" ? "lines" : undefined,
+            fill: visualType === "area" ? "tozerox" : undefined,
+          name: "Salinity",
+        })
+      }
+      if (param === "pressure") {
+        traces.push({
+          y: data.map((d) => d.depth),
+          x: data.map((d) => d.pressure),
+          type: visualType,
+          mode: visualType === "line" ? "lines" : undefined,
+            fill: visualType === "area" ? "tozerox" : undefined,
+          name: "Pressure",
+        })
+      }
+    })
+    return traces
   }
 
+ const generatePlotlyLayout = () => ({
+  yaxis: { autorange: "reversed", title: { text: "Depth (m)" } },
+  xaxis: { title: { text: "Value" } },
+  margin: { t: 30, r: 30, b: 50, l: 50 },
+  legend: { orientation: "h", y: -0.2 },
+  hovermode: "closest",
+  paper_bgcolor: "#1e1e1e",
+  plot_bgcolor: "#1e1e1e",
+  font: { color: "#fff" },
+})
+
+
+  // ------------------- JSX -------------------
   return (
     <div className="space-y-8 max-w-6xl mx-auto px-3 sm:px-6">
       {/* Mode Switch */}
@@ -377,10 +351,10 @@ export default function ComparePage() {
         </Button>
       </div>
 
-      {/* Input Card */}
+      {/* Input + Filters */}
       <div className="glass-card rounded-2xl p-6 shadow-2xl border border-primary/20">
         <h2 className="text-xl sm:text-2xl font-bold mb-4">⚖️ Compare Profiles</h2>
-
+        {/* Float Inputs */}
         {mode === "float" && (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <input
@@ -399,7 +373,7 @@ export default function ComparePage() {
             />
           </div>
         )}
-
+        {/* Location Inputs */}
         {mode === "location" && (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
@@ -416,55 +390,54 @@ export default function ComparePage() {
             </div>
           </div>
         )}
-
-        {/* Filters */}
+        {/* Dates */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-5">
           <div className="flex flex-col">
             <label className="text-sm font-medium mb-1">Start Date</label>
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              className="w-full px-3 py-2 border rounded-lg text-sm"
-            />
+            <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="w-full px-3 py-2 border rounded-lg text-sm" />
           </div>
           <div className="flex flex-col">
             <label className="text-sm font-medium mb-1">End Date</label>
-            <input
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              className="w-full px-3 py-2 border rounded-lg text-sm"
-            />
+            <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="w-full px-3 py-2 border rounded-lg text-sm" />
           </div>
         </div>
-
+        {/* Depth Range */}
         <div className="mt-4">
-          <input
-            type="range"
-            min="0"
-            max="2000"
-            step="50"
-            value={depthRange[0]}
-            onChange={(e) => setDepthRange([Number(e.target.value), depthRange[1]])}
-            className="w-full accent-primary"
-          />
-          <p className="text-sm">Depth: {depthRange[0]} – {depthRange[1]} m</p>
-        </div>
+  <label className="text-sm font-medium mb-2">Depth Range (m)</label>
+  <div className="flex items-center gap-4">
+    <span className="text-sm">{depthRange[0]}</span>
+    <input
+      type="range"
+      min={0}
+      max={2000}
+      step={50}
+      value={depthRange[0]}
+      onChange={(e) => setDepthRange([Math.min(Number(e.target.value), depthRange[1]), depthRange[1]])}
+      className="flex-1 accent-primary"
+    />
+    <input
+      type="range"
+      min={0}
+      max={2000}
+      step={50}
+      value={depthRange[1]}
+      onChange={(e) => setDepthRange([depthRange[0], Math.max(Number(e.target.value), depthRange[0])])}
+      className="flex-1 accent-primary"
+    />
+    <span className="text-sm">{depthRange[1]}</span>
+  </div>
+</div>
 
+        {/* Parameter Selection */}
         <div className="mt-5 space-y-2">
           {parameters.map((param) => (
             <label key={param.id} className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={selectedParams.includes(param.id)}
-                onChange={() => handleParamToggle(param.id)}
-              />
+              <input type="checkbox" checked={selectedParams.includes(param.id)} onChange={() => handleParamToggle(param.id)} />
               {param.icon} {param.name}
             </label>
           ))}
         </div>
-
+        {/* Submit */}
         <div className="mt-6">
           <Button
             onClick={handleSubmit}
@@ -486,57 +459,40 @@ export default function ComparePage() {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
           <h3 className="text-lg sm:text-xl font-bold">📊 Comparison Visualization</h3>
           <div className="flex gap-2 w-full sm:w-auto">
-            <Button size="sm" variant={compareMode === "overlay" ? "default" : "outline"} onClick={() => setCompareMode("overlay")}>
-              🔀 Overlay
-            </Button>
-            <Button size="sm" variant={compareMode === "side" ? "default" : "outline"} onClick={() => setCompareMode("side")}>
-              🆚 Side-by-Side
-            </Button>
+            <Button size="sm" variant={compareMode === "overlay" ? "default" : "outline"} onClick={() => setCompareMode("overlay")}>🔀 Overlay</Button>
+            <Button size="sm" variant={compareMode === "side" ? "default" : "outline"} onClick={() => setCompareMode("side")}>🆚 Side-by-Side</Button>
           </div>
         </div>
 
+        {/* Visual Type */}
         <div className="flex gap-2 mb-4">
-          <Button size="sm" variant={visualType === "line" ? "default" : "outline"} onClick={() => setVisualType("line")}>
-            📈 Line
-          </Button>
-          <Button size="sm" variant={visualType === "area" ? "default" : "outline"} onClick={() => setVisualType("area")}>
-            🌊 Area
-          </Button>
-          <Button size="sm" variant={visualType === "bar" ? "default" : "outline"} onClick={() => setVisualType("bar")}>
-            📊 Bar
-          </Button>
+          <Button size="sm" variant={visualType === "line" ? "default" : "outline"} onClick={() => setVisualType("line")}>📈 Line</Button>
+          <Button size="sm" variant={visualType === "area" ? "default" : "outline"} onClick={() => setVisualType("area")}>🌊 Area</Button>
+          <Button size="sm" variant={visualType === "bar" ? "default" : "outline"} onClick={() => setVisualType("bar")}>📊 Bar</Button>
         </div>
 
+        {/* Plot */}
         {isClient && (firstData.length > 0 || secondData.length > 0) ? (
           compareMode === "overlay" ? (
-            <motion.div
-              key={visualType + "-overlay"}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4 }}
-              className="h-80"
-            >
-              {renderOverlayChart()}
+            <motion.div key={visualType + "-overlay"} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="h-80">
+              <Plot data={generatePlotlyTraces(true)} layout={generatePlotlyLayout()} style={{ width: "100%", height: "100%" }} config={{ displayModeBar: true }} />
             </motion.div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {[{ data: firstData, label: "First" }, { data: secondData, label: "Second" }].map((d, i) => (
-                <motion.div
-                  key={visualType + i}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.4, delay: i * 0.1 }}
-                  className="h-80"
-                >
-                  {renderSingleChart(d.data, i)}
+              {[firstData, secondData].map((dataSet, i) => (
+                <motion.div key={visualType + "-side-" + i} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: i * 0.1 }} className="h-80">
+                  <Plot
+                    data={generateSingleTraces(dataSet)}
+                    layout={{ ...generatePlotlyLayout(), title: {text :i === 0  ? "First Profile" : "Second Profile" }}}
+                    style={{ width: "100%", height: "100%" }}
+                    config={{ displayModeBar: true }}
+                  />
                 </motion.div>
               ))}
             </div>
           )
         ) : (
-          <p className="text-muted-foreground text-sm">
-            Select filters and fetch profiles to view chart
-          </p>
+          <p className="text-muted-foreground text-sm">Select filters and fetch profiles to view chart</p>
         )}
       </div>
     </div>

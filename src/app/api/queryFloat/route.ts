@@ -1,4 +1,6 @@
 // app/api/queryFloat/route.ts
+export const dynamic = "force-dynamic"; // ensures this API runs on server
+
 import { NextResponse } from "next/server";
 import { query } from "@/lib/db";
 

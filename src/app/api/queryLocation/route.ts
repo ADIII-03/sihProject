@@ -8,16 +8,13 @@ export async function POST(req: Request) {
     console.log("[API] Incoming request body:", body);
 
     const {
-      platform_number,
+      latitude,
+      longitude,
       cycle_number,
       juld_start,
       juld_end,
       pressure_min,
       pressure_max,
-      lat_min,
-      lat_max,
-      lon_min,
-      lon_max,
     } = body || {};
 
     const selectFields = [
@@ -36,13 +33,6 @@ export async function POST(req: Request) {
     const queryParams: any[] = [];
     let paramIndex = 1;
 
-    if (platform_number) {
-      whereConditions.push(
-        `regexp_replace(p.platform_number, E'^b''(.*)''$', '\\1') = $${paramIndex++}`
-      );
-      queryParams.push(platform_number);
-    }
-
     if (cycle_number !== undefined && cycle_number !== null) {
       whereConditions.push(`p.cycle_number = $${paramIndex++}`);
       queryParams.push(cycle_number);
@@ -60,15 +50,19 @@ export async function POST(req: Request) {
       paramIndex += 2;
     }
 
-    if (lat_min !== undefined && lat_max !== undefined) {
-      whereConditions.push(`p.latitude BETWEEN $${paramIndex} AND $${paramIndex + 1}`);
-      queryParams.push(lat_min, lat_max);
-      paramIndex += 2;
-    }
+    // 🌍 Location filter with ±5° tolerance
+    if (latitude !== undefined && longitude !== undefined) {
+      const latMin = latitude - 5;
+      const latMax = latitude + 5;
+      const lonMin = longitude - 5;
+      const lonMax = longitude + 5;
 
-    if (lon_min !== undefined && lon_max !== undefined) {
+      whereConditions.push(`p.latitude BETWEEN $${paramIndex} AND $${paramIndex + 1}`);
+      queryParams.push(latMin, latMax);
+      paramIndex += 2;
+
       whereConditions.push(`p.longitude BETWEEN $${paramIndex} AND $${paramIndex + 1}`);
-      queryParams.push(lon_min, lon_max);
+      queryParams.push(lonMin, lonMax);
       paramIndex += 2;
     }
 
@@ -77,7 +71,8 @@ export async function POST(req: Request) {
       FROM profiles p
       JOIN measurements m ON p.id = m.profile_id
       WHERE ${whereConditions.join(" AND ")}
-      ORDER BY m.pres;
+      ORDER BY ( (p.latitude - $1)^2 + (p.longitude - $2)^2 ), m.pres
+      LIMIT 500;
     `.trim();
 
     console.log("[API] Final SQL Query:", sqlQuery, "Params:", queryParams);
