@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button"
 import { Chat, type Message } from "@/components/Chat"
 import { HelpModal } from "@/components/ui/help-modal"
 import { Sidebar } from "@/components/ui/sidebar"
+import dynamic from "next/dynamic";
+const ArgoMap = dynamic(() => import("../components/ArgoMap"), { ssr: false });
 
 import ViewProfilePage from "@/app/ViewProfilePage/page"
 import ComparePage from "@/app/ComparePage/page"
@@ -15,7 +17,8 @@ export default function OceanicChatApp() {
   const [showSidebar, setShowSidebar] = useState(false)
   const [mounted, setMounted] = useState(false)
   const [messages, setMessages] = useState<Message[]>([])
-  const [currentPage, setCurrentPage] = useState<"chat" | "profile" | "compare">("chat")
+  const [currentPage, setCurrentPage] = useState<"chat" | "profile" | "compare" | "map">("chat");
+
 
   useEffect(() => {
     setMounted(true)
@@ -94,6 +97,16 @@ export default function OceanicChatApp() {
               <span className="mr-2 text-lg">📊</span>
               <span className="hidden sm:inline font-medium">Compare</span>
             </Button>
+            <Button
+  variant={currentPage === "map" ? "default" : "ghost"}
+  size="sm"
+  className="h-10 px-4 w-full sm:w-auto transition-all duration-300 hover-lift interactive-scale border border-border/30 bg-background/80 text-foreground hover:bg-primary hover:text-primary-foreground"
+  onClick={() => setCurrentPage("map")}
+>
+  <span className="mr-2 text-lg">🗺️</span>
+  <span className="hidden sm:inline font-medium">Map</span>
+</Button>
+
           </nav>
 
           {/* Header Controls */}
@@ -171,6 +184,11 @@ export default function OceanicChatApp() {
             <ComparePage />
           </div>
         )}
+        {currentPage === "map" && (
+  <div className="container mx-auto px-2 sm:px-6 py-4">
+    <ArgoMap />
+  </div>
+)}
 
         {/* Floating Help Button */}
         {currentPage === "chat" && (

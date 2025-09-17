@@ -12,15 +12,26 @@ const Plot = dynamic<PlotParams>(() => import("react-plotly.js"), { ssr: false }
 
 mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN as string
 
-export default function ViewProfilePage() {
+type ChartDatum = {
+  depth: number
+  temperature?: number
+  salinity?: number
+  pressure?: number
+}
+type ViewProfilePageProps = {
+  floatId?: string
+}
+
+
+export default function ViewProfilePage({ floatId: initialFloatId }: ViewProfilePageProps) {
   const [mode, setMode] = useState<"float" | "location">("float")
-  const [floatId, setFloatId] = useState("")
+    const [floatId, setFloatId] = useState(initialFloatId || "")
   const [cycleNumber, setCycleNumber] = useState("")
   const [selectedParams, setSelectedParams] = useState<string[]>(["salinity"])
   const [startDate, setStartDate] = useState("")
   const [endDate, setEndDate] = useState("")
   const [depthRange, setDepthRange] = useState([0, 2000])
-  const [chartData, setChartData] = useState<any[]>([])
+  const [chartData, setChartData] = useState<ChartDatum[]>([])
   const [isLoading, setIsLoading] = useState(false)
 
   const [lat, setLat] = useState<number | null>(null)
@@ -44,7 +55,7 @@ export default function ViewProfilePage() {
       mapRef.current = new mapboxgl.Map({
         container: mapContainerRef.current,
         style: "mapbox://styles/mapbox/streets-v11",
-        center: [78, 20], // Default India
+        center: [78, 20],
         zoom: 2,
       })
 
@@ -67,24 +78,95 @@ export default function ViewProfilePage() {
     )
   }
 
+const handleSubmit = async () => {
+  setIsLoading(true);
+  try {
+    const apiUrl = mode === "float" ? "/api/queryFloat" : "/api/queryLocation";
 
-  const handleSubmit = async () => {
-    setIsLoading(true)
-    try {
-      // Example: Replace with API calls if needed
-      // For now we just keep dummyData
-      console.log("Fetch simulated data")
-    } catch (error) {
-      console.error("❌ Error fetching profile:", error)
-    } finally {
-      setIsLoading(false)
+    const payload =
+      mode === "float"
+        ? {
+            floatId,
+            cycleNumber,
+            parameters: selectedParams,
+            depthRange,
+            startDate,
+            endDate,
+          }
+        : {
+            latitude: lat,
+            longitude: lng,
+            cycle_number: cycleNumber ? Number(cycleNumber) : undefined,
+            juld_start: startDate || undefined,
+            juld_end: endDate || undefined,
+            pressure_min: depthRange[0],
+            pressure_max: depthRange[1],
+          };
+
+    const res = await fetch(apiUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    const json = await res.json();
+    if (json.error) {
+      console.error("API error:", json.error);
+      return;
     }
-  }
 
-  // Filtered data based on depthRange
+    setChartData(json.data);
+  } catch (error) {
+    console.error("Fetch error:", error);
+  } finally {
+    setIsLoading(false);
+  }
+};
+
+
   const filteredChartData = chartData.filter(
     (d) => d.depth >= depthRange[0] && d.depth <= depthRange[1]
   )
+
+  // Generate Plotly traces
+ const traces: PlotParams["data"] = []
+
+if (filteredChartData.length > 0) {
+  selectedParams.forEach((param) => {
+    const yData = filteredChartData.map((d) => d.depth)
+    let xData: number[] = []
+    let color = ""
+
+    switch (param) {
+      case "temperature":
+        xData = filteredChartData.map((d) => d.temperature!).filter(v => v !== undefined)
+        color = "#ff7300"
+        break
+      case "salinity":
+        xData = filteredChartData.map((d) => d.salinity!).filter(v => v !== undefined)
+        color = "#4da6ff"
+        break
+      case "pressure":
+        xData = filteredChartData.map((d) => d.pressure!).filter(v => v !== undefined)
+        color = "#00c49f"
+        break
+    }
+
+    if (xData.length > 0) {
+      traces.push({
+        x: xData,
+        y: yData,
+        type: visualType === "bar" ? "bar" : "scatter",
+        mode: visualType === "line" ? "lines" : "markers",
+        fill: visualType === "area" ? "tozeroy" : undefined,
+        name: param.charAt(0).toUpperCase() + param.slice(1),
+        line: { color },
+        marker: { color },
+        orientation: visualType === "bar" ? "h" : undefined,
+      })
+    }
+  })
+}
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto px-3 sm:px-6">
@@ -242,7 +324,7 @@ export default function ViewProfilePage() {
           </div>
         </div>
 
-        {chartData.length > 0 ? (
+        {traces.length > 0 ? (
           <motion.div
             key={visualType}
             initial={{ opacity: 0, y: 20 }}
@@ -250,47 +332,7 @@ export default function ViewProfilePage() {
             transition={{ duration: 0.4 }}
           >
             <Plot
-              data={[
-                ...(selectedParams.includes("temperature")
-                  ? [{
-                      x: filteredChartData.map(d => d.temperature),
-                      y: filteredChartData.map(d => d.depth),
-                      type: (visualType === "bar" ? "bar" : "scatter") as "scatter" | "bar",
-                      mode: visualType === "line" ? "lines" : "markers",
-                      orientation: visualType === "bar" ? "h" : undefined,
-                      fill: visualType === "area" ? "tozerox" : "none",
-                      name: "Temperature",
-                      line: { color: "#ff7300" },
-                      marker: { color: "#ff7300" },
-                    }]
-                  : []),
-                ...(selectedParams.includes("salinity")
-                  ? [{
-                      x: filteredChartData.map(d => d.salinity),
-                      y: filteredChartData.map(d => d.depth),
-                      type: visualType === "bar" ? "bar" : "scatter",
-                      mode: visualType === "line" ? "lines" : "markers",
-                      orientation: visualType === "bar" ? "h" : undefined,
-                      fill: visualType === "area" ? "tozerox" : "none",
-                      name: "Salinity",
-                      line: { color: "#4da6ff" },
-                      marker: { color: "#4da6ff" },
-                    }]
-                  : []),
-                ...(selectedParams.includes("pressure")
-                  ? [{
-                      x: filteredChartData.map(d => d.pressure),
-                      y: filteredChartData.map(d => d.depth),
-                      type: visualType === "bar" ? "bar" : "scatter",
-                      mode: visualType === "line" ? "lines" : "markers",
-                      orientation: visualType === "bar" ? "h" : undefined,
-                      fill: visualType === "area" ? "tozerox" : "none",
-                      name: "Pressure",
-                      line: { color: "#00c49f" },
-                      marker: { color: "#00c49f" },
-                    }]
-                  : []),
-              ]}
+              data={traces}
               layout={{
                 autosize: true,
                 height: 400,
