@@ -1,5 +1,5 @@
 // app/api/compareFloat/route.ts
-export const dynamic = "force-dynamic"; // ensures this API runs on server
+export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
 import { query } from "@/lib/db";
@@ -9,45 +9,71 @@ export async function POST(req: Request) {
     const body = await req.json();
     console.log("[COMPARE FLOAT] Incoming body:", body);
 
-    const { firstFloat, secondFloat, floatId, parameters, depthRange, startDate, endDate } = body;
+    const {
+      firstFloat,
+      secondFloat,
+      firstCycle,
+      secondCycle,
+      parameters = [],
+      depthRange = [0, 2000],
+      startDate,
+      endDate,
+    } = body;
 
-    // fallback support if frontend only sends floatId
-    const f1 = firstFloat || floatId;
-    const f2 = secondFloat || floatId;
+    if (!firstFloat || !secondFloat) {
+      return NextResponse.json(
+        { error: "Both firstFloat and secondFloat are required." },
+        { status: 400 }
+      );
+    }
 
-    const buildQuery = (floatId: string) => {
-      const selectFields = ["m.pres AS depth"];
+    const buildQuery = (
+      floatId: string,
+      cycleNumber?: number
+    ): { sql: string; params: any[] } => {
+      const selectFields = [
+        "p.id AS profile_id",
+        "p.platform_number",
+        "p.cycle_number",
+        "p.juld",
+        "p.latitude",
+        "p.longitude",
+        "m.pres AS depth",
+      ];
+
       if (parameters.includes("temperature")) selectFields.push("m.temp AS temperature");
       if (parameters.includes("salinity")) selectFields.push("m.psal AS salinity");
       if (parameters.includes("pressure")) selectFields.push("m.pres AS pressure");
 
-      const whereConditions: string[] = [
-        "regexp_replace(p.platform_number, E'^b''(.*)''$', '\\1') = $1",
-        "m.pres BETWEEN $2 AND $3",
-      ];
-      const queryParams: any[] = [floatId, depthRange[0], depthRange[1]];
+      const whereConditions = ["p.platform_number = $1", "m.pres BETWEEN $2 AND $3"];
+      const queryParams: any[] = [floatId.trim(), depthRange[0], depthRange[1]];
+      let paramIndex = 4;
 
-      const paramIndex = 4;
+      if (cycleNumber !== undefined) {
+        whereConditions.push(`p.cycle_number = $${paramIndex}`);
+        queryParams.push(Number(cycleNumber));
+        paramIndex++;
+      }
 
       if (startDate && endDate) {
         whereConditions.push(`p.juld BETWEEN $${paramIndex} AND $${paramIndex + 1}`);
         queryParams.push(startDate, endDate);
+        paramIndex += 2;
       }
 
-      return {
-        sql: `
-          SELECT ${selectFields.join(", ")}
-          FROM profiles p
-          JOIN measurements m ON p.id = m.profile_id
-          WHERE ${whereConditions.join(" AND ")}
-          ORDER BY m.pres;
-        `.trim(),
-        params: queryParams,
-      };
+      const sql = `
+        SELECT ${selectFields.join(", ")}
+        FROM profiles p
+        JOIN measurements m ON p.id = m.profile_id
+        WHERE ${whereConditions.join(" AND ")}
+        ORDER BY m.pres;
+      `.trim();
+
+      return { sql, params: queryParams };
     };
 
-    const firstQuery = buildQuery(f1);
-    const secondQuery = buildQuery(f2);
+    const firstQuery = buildQuery(firstFloat, firstCycle);
+    const secondQuery = buildQuery(secondFloat, secondCycle);
 
     console.log("[COMPARE FLOAT] First query:", firstQuery);
     console.log("[COMPARE FLOAT] Second query:", secondQuery);
@@ -56,10 +82,10 @@ export async function POST(req: Request) {
       query(firstQuery.sql, firstQuery.params),
       query(secondQuery.sql, secondQuery.params),
     ]);
-  // console.log("[COMPARE FLOAT] Data:", firstData, secondData);
+
     return NextResponse.json({
-      firstFloat: { floatId: f1, data: firstData },
-      secondFloat: { floatId: f2, data: secondData },
+      firstFloat: { floatId: firstFloat, data: firstData },
+      secondFloat: { floatId: secondFloat, data: secondData },
     });
   } catch (error: any) {
     console.error("[COMPARE FLOAT] ERROR:", error);

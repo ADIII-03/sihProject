@@ -5,22 +5,22 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    const sqlQuery = `
-      SELECT DISTINCT ON (p.platform_number)
-        regexp_replace(p.platform_number, E'^b''(.*)''$', '\\1') AS platform_number,
-        p.latitude,
-        p.longitude,
-        p.juld
-      FROM profiles p
-      ORDER BY p.platform_number, p.juld DESC;
+    // Get the latest profile per platform
+    const sql = `
+      SELECT DISTINCT ON (platform_number)
+        platform_number,
+        latitude::float AS latitude,
+        longitude::float AS longitude,
+        juld
+      FROM profiles
+      ORDER BY platform_number, juld DESC
     `;
 
-    const rows = await query(sqlQuery, []);
-    return NextResponse.json(rows);
-  } catch (error: any) {
-    console.error("[API] DB OFF:", error.message);
+    const rows = await query(sql);
 
-    // Return empty array if DB fails
-    return NextResponse.json([]);
+    return NextResponse.json({ floats: rows });
+  } catch (err: any) {
+    console.error("[API] Error fetching latest floats:", err);
+    return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }

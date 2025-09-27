@@ -4,6 +4,7 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
+  /* Ocean-inspired color palette */
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
@@ -37,6 +38,11 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+
+  /* Ocean gradients */
+  --ocean-surface: linear-gradient(135deg, oklch(0.85 0.05 200) 0%, oklch(0.75 0.08 180) 50%, oklch(0.65 0.12 160) 100%);
+  --ocean-deep: linear-gradient(135deg, oklch(0.25 0.08 240) 0%, oklch(0.35 0.12 220) 50%, oklch(0.45 0.15 200) 100%);
+  --wave-shimmer: linear-gradient(90deg, transparent 0%, oklch(0.9 0.02 180) 50%, transparent 100%);
 }
 
 .dark {
@@ -72,9 +78,16 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(0.269 0 0);
   --sidebar-ring: oklch(0.439 0 0);
+
+  /* Dark ocean gradients */
+  --ocean-surface: linear-gradient(135deg, oklch(0.15 0.05 240) 0%, oklch(0.25 0.08 220) 50%, oklch(0.35 0.12 200) 100%);
+  --ocean-deep: linear-gradient(135deg, oklch(0.05 0.02 260) 0%, oklch(0.12 0.05 240) 50%, oklch(0.18 0.08 220) 100%);
+  --wave-shimmer: linear-gradient(90deg, transparent 0%, oklch(0.3 0.05 180) 50%, transparent 100%);
 }
 
 @theme inline {
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -118,31 +131,81 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-sans;
   }
 }
 
-/* Advanced Ocean-Inspired Animations */
-@keyframes oceanWave {
+@layer utilities {
+  .ocean-gradient {
+    background: var(--ocean-surface);
+  }
+
+  .ocean-deep-gradient {
+    background: var(--ocean-deep);
+  }
+
+  .glass-ocean {
+    @apply backdrop-blur-xl bg-card/60 border border-border/20;
+  }
+
+  .wave-animation {
+    animation: wave 3s ease-in-out infinite;
+  }
+
+  .float-animation {
+    animation: float 6s ease-in-out infinite;
+  }
+
+  .shimmer-wave {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .shimmer-wave::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: var(--wave-shimmer);
+    animation: shimmer 2s infinite;
+  }
+
+  .text-ocean-gradient {
+    background: linear-gradient(135deg, oklch(0.45 0.15 220), oklch(0.6 0.12 180));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+}
+
+@keyframes wave {
   0%,
   100% {
     transform: translateY(0px) rotate(0deg);
-    opacity: 0.7;
   }
   50% {
-    transform: translateY(-10px) rotate(1deg);
-    opacity: 1;
+    transform: translateY(-10px) rotate(5deg);
   }
 }
 
-@keyframes floatUp {
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-20px);
+  }
+}
+
+@keyframes shimmer {
   0% {
-    opacity: 0;
-    transform: translateY(30px) scale(0.8);
+    left: -100%;
   }
   100% {
-    opacity: 1;
-    transform: translateY(0px) scale(1);
+    left: 100%;
   }
 }
 
@@ -157,240 +220,20 @@
   }
 }
 
-@keyframes shimmerFlow {
-  0% {
-    background-position: -200px 0;
-  }
-  100% {
-    background-position: calc(200px + 100%) 0;
-  }
-}
-
-@keyframes particleFloat {
-  0%,
-  100% {
-    transform: translateY(0px) translateX(0px);
-  }
-  25% {
-    transform: translateY(-20px) translateX(10px);
-  }
-  50% {
-    transform: translateY(-10px) translateX(-5px);
-  }
-  75% {
-    transform: translateY(-30px) translateX(15px);
-  }
-}
-
-@keyframes gradientShift {
-  0%,
-  100% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
-}
-
-@keyframes pulseGlow {
-  0%,
-  100% {
-    box-shadow: 0 0 5px rgba(16, 185, 129, 0.3);
-  }
-  50% {
-    box-shadow: 0 0 20px rgba(16, 185, 129, 0.6), 0 0 30px rgba(16, 185, 129, 0.4);
-  }
-}
-
-/* Animation Classes */
-.animate-ocean-wave {
-  animation: oceanWave 3s ease-in-out infinite;
-}
-
-.animate-float-up {
-  animation: floatUp var(--animation-duration-slow) var(--animation-easing) forwards;
-}
-
-.animate-ripple {
-  animation: ripple 0.6s ease-out;
-}
-
-.animate-shimmer-flow {
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
-  background-size: 200px 100%;
-  animation: shimmerFlow 2s infinite;
-}
-
-.animate-particle-float {
-  animation: particleFloat 4s ease-in-out infinite;
-}
-
-.animate-gradient-shift {
-  background-size: 200% 200%;
-  animation: gradientShift 3s ease infinite;
-}
-
-.animate-pulse-glow {
-  animation: pulseGlow 2s ease-in-out infinite;
-}
-
-/* Glass Morphism Effects */
-.glass-card {
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-}
-
-.dark .glass-card {
-  background: rgba(0, 0, 0, 0.2);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-}
-
-/* Enhanced Gradient Backgrounds */
-.bg-ocean-gradient {
-  background: linear-gradient(135deg, #059669 0%, #10b981 50%, #06b6d4 100%);
-}
-
-.bg-ocean-gradient-animated {
-  background: linear-gradient(135deg, #059669, #10b981, #06b6d4, #3b82f6);
-  background-size: 300% 300%;
-  animation: gradientShift 6s ease infinite;
-}
-
-.bg-subtle-gradient {
-  background: linear-gradient(135deg, rgba(248, 250, 252, 0.8) 0%, rgba(241, 245, 249, 0.9) 100%);
-}
-
-.dark .bg-subtle-gradient {
-  background: linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(51, 65, 85, 0.9) 100%);
-}
-
-/* Particle Effects */
-.particle-container {
+.ripple-effect {
   position: relative;
   overflow: hidden;
 }
 
-.particle {
+.ripple-effect::after {
+  content: "";
   position: absolute;
-  width: 4px;
-  height: 4px;
-  background: rgba(16, 185, 129, 0.6);
-  border-radius: 50%;
-  pointer-events: none;
-}
-
-.particle:nth-child(1) {
-  animation-delay: 0s;
-  top: 20%;
-  left: 10%;
-}
-.particle:nth-child(2) {
-  animation-delay: 0.5s;
-  top: 60%;
-  left: 20%;
-}
-.particle:nth-child(3) {
-  animation-delay: 1s;
-  top: 40%;
-  left: 70%;
-}
-.particle:nth-child(4) {
-  animation-delay: 1.5s;
-  top: 80%;
-  left: 80%;
-}
-.particle:nth-child(5) {
-  animation-delay: 2s;
-  top: 30%;
+  top: 50%;
   left: 50%;
-}
-
-/* Enhanced Hover Effects */
-.hover-lift {
-  transition: all var(--animation-duration-normal) var(--animation-easing);
-}
-
-.hover-lift:hover {
-  transform: translateY(-8px);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-}
-
-.hover-glow {
-  transition: all var(--animation-duration-normal) var(--animation-easing);
-}
-
-.hover-glow:hover {
-  box-shadow: 0 0 30px rgba(16, 185, 129, 0.3);
-  border-color: rgba(16, 185, 129, 0.5);
-}
-
-/* Enhanced Scrollbar */
-.custom-scrollbar {
-  scrollbar-width: thin;
-  scrollbar-color: rgba(16, 185, 129, 0.3) transparent;
-}
-
-.custom-scrollbar::-webkit-scrollbar {
-  width: 8px;
-}
-
-.custom-scrollbar::-webkit-scrollbar-track {
-  background: rgba(241, 245, 249, 0.5);
-  border-radius: 4px;
-}
-
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(16, 185, 129, 0.4);
-  border-radius: 4px;
-  transition: background var(--animation-duration-fast) ease;
-}
-
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(16, 185, 129, 0.6);
-}
-
-/* Loading Animations */
-.loading-wave {
-  display: inline-block;
-  width: 40px;
-  height: 40px;
-  background: linear-gradient(45deg, transparent, rgba(16, 185, 129, 0.3), transparent);
+  width: 0;
+  height: 0;
   border-radius: 50%;
-  animation: oceanWave 1.5s ease-in-out infinite;
-}
-
-.loading-dots {
-  display: flex;
-  gap: 4px;
-}
-
-.loading-dots div {
-  width: 8px;
-  height: 8px;
-  background: rgba(16, 185, 129, 0.7);
-  border-radius: 50%;
-  animation: floatUp 1.4s ease-in-out infinite;
-}
-
-.loading-dots div:nth-child(2) {
-  animation-delay: 0.2s;
-}
-.loading-dots div:nth-child(3) {
-  animation-delay: 0.4s;
-}
-
-/* Micro-interactions */
-.interactive-scale {
-  transition: transform var(--animation-duration-fast) var(--animation-easing-bounce);
-}
-
-.interactive-scale:active {
-  transform: scale(0.95);
-}
-
-.interactive-scale:hover {
-  transform: scale(1.05);
+  background: oklch(0.7 0.15 160 / 0.3);
+  transform: translate(-50%, -50%);
+  animation: ripple 0.6s ease-out;
 }

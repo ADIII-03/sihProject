@@ -1,5 +1,4 @@
-// app/api/queryFloat/route.ts
-export const dynamic = "force-dynamic"; // ensures this API runs on server
+export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
 import { query } from "@/lib/db";
@@ -9,29 +8,28 @@ export async function POST(req: Request) {
     const body = await req.json();
     console.log("[API] Incoming request body:", body);
 
-    const { floatId, cycleNumber, parameters, depthRange, startDate, endDate } = body;
+    const { floatId, cycleNumber, parameters = [], depthRange = [0, 2000], startDate, endDate } = body;
+    const floatIdTrimmed = String(floatId).trim();
 
+    // SELECT fields: always depth (pres) included
     const selectFields = [
       "p.id AS profile_id",
-      "regexp_replace(p.platform_number, E'^b''(.*)''$', '\\1') AS platform_number",
+      "p.platform_number",
       "p.cycle_number",
       "p.juld",
       "p.latitude",
       "p.longitude",
-      "m.pres AS pressure",
+      "m.pres AS depth"
     ];
     if (parameters.includes("temperature")) selectFields.push("m.temp AS temperature");
     if (parameters.includes("salinity")) selectFields.push("m.psal AS salinity");
+    if (parameters.includes("pressure")) selectFields.push("m.pres AS pressure"); // pressure as separate param
 
-    // build WHERE clause safely
-    const whereConditions = [
-      "regexp_replace(p.platform_number, E'^b''(.*)''$', '\\1') = $1",
-      "m.pres BETWEEN $2 AND $3",
-    ];
-    const queryParams: any[] = [floatId, depthRange[0], depthRange[1]];
+    const whereConditions = ["p.platform_number = $1", "m.pres BETWEEN $2 AND $3"];
+    const queryParams: any[] = [floatIdTrimmed, depthRange[0], depthRange[1]];
     let paramIndex = 4;
 
-    if (cycleNumber && String(cycleNumber).trim() !== "") {
+    if (cycleNumber?.trim()) {
       whereConditions.push(`p.cycle_number = $${paramIndex}`);
       queryParams.push(Number(cycleNumber));
       paramIndex++;
@@ -51,10 +49,9 @@ export async function POST(req: Request) {
       ORDER BY m.pres;
     `.trim();
 
-    console.log("[API] Final SQL Query:", sqlQuery, "Params:", queryParams);
+    console.log("[API] SQL:", sqlQuery, "Params:", queryParams);
 
     const rows = await query(sqlQuery, queryParams);
-    console.log("SQL returned rows:", rows);
     return NextResponse.json({ data: rows });
   } catch (error: any) {
     console.error("[API] ERROR:", error);

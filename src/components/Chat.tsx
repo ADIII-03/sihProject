@@ -24,10 +24,7 @@ export function Chat({ className, messages: externalMessages, onMessagesChange }
   const [internalMessages, setInternalMessages] = useState<Message[]>([])
   const messages = externalMessages || internalMessages
 
-  // ✅ Unified setMessages that works with both state and onMessagesChange
-  const setMessages = (
-    updater: Message[] | ((prev: Message[]) => Message[])
-  ) => {
+  const setMessages = (updater: Message[] | ((prev: Message[]) => Message[])) => {
     if (onMessagesChange) {
       if (typeof updater === "function") {
         onMessagesChange(updater(messages))
@@ -44,17 +41,13 @@ export function Chat({ className, messages: externalMessages, onMessagesChange }
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
-  }
-
-  useEffect(() => {
-    scrollToBottom()
-  }, [messages])
+  const scrollToBottom = () => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+  useEffect(() => scrollToBottom(), [messages])
 
   const handleSendMessage = async () => {
     if (!inputValue.trim() || isLoading) return
 
+    // 1️⃣ Add user's message
     const userMessage: Message = {
       id: Date.now().toString(),
       type: "user",
@@ -62,32 +55,37 @@ export function Chat({ className, messages: externalMessages, onMessagesChange }
       timestamp: new Date(),
       visualizationType: ""
     }
-
     setMessages((prev) => [...prev, userMessage])
+
     const currentQuery = inputValue
     setInputValue("")
     setIsLoading(true)
 
     try {
+      // 2️⃣ Call your backend API (which calls Groq)
       const response = await fetch("/api/query", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ query: currentQuery }),
       })
 
       if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`)
+        const err = await response.text()
+        throw new Error(`Groq API failed: ${err}`)
       }
 
       const data = await response.json()
 
+      // 3️⃣ Handle structured response
+      const messageContent =
+        data.response ||
+        "🤖 The AI didn’t return any content. Try rephrasing your question."
+
+      // 4️⃣ Add bot's message
       const botMessage: Message = {
         id: (Date.now() + 1).toString(),
         type: "bot",
-        content: data.response || "I received your query but couldn't generate a response.",
+        content: messageContent,
         timestamp: new Date(),
         visualizationType: ""
       }
@@ -96,12 +94,14 @@ export function Chat({ className, messages: externalMessages, onMessagesChange }
     } catch (error) {
       console.error("Query error:", error)
 
+      // 5️⃣ Show error as bot message
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         type: "bot",
-        content: error instanceof Error
-          ? `Sorry, I encountered an error: ${error.message}. Please try again with a different query.`
-          : "Sorry, I encountered an unexpected error processing your request. Please try again.",
+        content:
+          error instanceof Error
+            ? `❌ Error: ${error.message}`
+            : "❌ Unknown error while calling Groq API.",
         timestamp: new Date(),
         visualizationType: ""
       }
@@ -120,26 +120,10 @@ export function Chat({ className, messages: externalMessages, onMessagesChange }
   }
 
   const suggestedQueries = [
-    {
-      icon: "🌊",
-      text: "What is the temperature profile in the Arabian Sea?",
-      category: "Temperature Analysis",
-    },
-    {
-      icon: "🧂",
-      text: "Compare salinity levels between different ocean regions",
-      category: "Salinity Comparison",
-    },
-    {
-      icon: "📍",
-      text: "Show me ARGO float locations in the Pacific Ocean",
-      category: "Float Tracking",
-    },
-    {
-      icon: "📊",
-      text: "Analyze oxygen levels over time in the Indian Ocean",
-      category: "Temporal Analysis",
-    },
+    { icon: "🌊", text: "What is the temperature profile in the Arabian Sea?", category: "Temperature Analysis" },
+    { icon: "🧂", text: "Compare salinity levels between different ocean regions", category: "Salinity Comparison" },
+    { icon: "📍", text: "Show me ARGO float locations in the Pacific Ocean", category: "Float Tracking" },
+    { icon: "📊", text: "Analyze oxygen levels over time in the Indian Ocean", category: "Temporal Analysis" },
   ]
 
   const handleSuggestedQuery = (query: string) => {
@@ -153,28 +137,19 @@ export function Chat({ className, messages: externalMessages, onMessagesChange }
         <div className="p-6 space-y-6 min-h-full">
           {messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-center space-y-8 animate-fade-in">
-              <div className="relative">
-                <div className="w-20 h-20 rounded-2xl bg-gradient-ocean flex items-center justify-center shadow-2xl animate-pulse-subtle">
-                  <span className="text-4xl">✨</span>
-                </div>
-                <div className="absolute -top-2 -right-2 w-6 h-6 bg-accent rounded-full flex items-center justify-center">
-                  <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
-                </div>
+              <div className="w-20 h-20 rounded-2xl bg-gradient-ocean flex items-center justify-center shadow-2xl animate-pulse-subtle">
+                <span className="text-4xl">✨</span>
               </div>
-
               <div className="space-y-4 max-w-2xl">
                 <h2 className="text-3xl font-bold text-foreground">Welcome to Ocean Analytics</h2>
                 <p className="text-lg text-muted-foreground leading-relaxed">
-                  Explore oceanographic data through natural language. Ask questions and get interactive
-                  visualizations instantly.
+                  Ask any question about temperature, salinity, ARGO floats, or oceanography data and get instant insights.
                 </p>
               </div>
 
-              {/* Suggested Queries */}
+              {/* ✅ Suggested Queries */}
               <div className="w-full max-w-4xl">
-                <h3 className="text-sm font-semibold text-muted-foreground mb-4 text-left">
-                  Try these examples:
-                </h3>
+                <h3 className="text-sm font-semibold text-muted-foreground mb-4 text-left">Try these examples:</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {suggestedQueries.map((query, index) => (
                     <Button
@@ -210,25 +185,8 @@ export function Chat({ className, messages: externalMessages, onMessagesChange }
                 <div className="flex justify-start animate-slide-in-left">
                   <div className="max-w-[80%] p-4 rounded-2xl shadow-sm bg-card border border-border/50">
                     <div className="flex items-center gap-3">
-                      <div className="relative">
-                        <div className="h-5 w-5 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
-                      </div>
-                      <div className="space-y-1">
-                        <span className="text-sm font-medium text-foreground">
-                          Analyzing oceanographic data...
-                        </span>
-                        <div className="flex gap-1">
-                          <div className="w-1 h-1 bg-primary rounded-full animate-pulse"></div>
-                          <div
-                            className="w-1 h-1 bg-primary rounded-full animate-pulse"
-                            style={{ animationDelay: "0.2s" }}
-                          ></div>
-                          <div
-                            className="w-1 h-1 bg-primary rounded-full animate-pulse"
-                            style={{ animationDelay: "0.4s" }}
-                          ></div>
-                        </div>
-                      </div>
+                      <div className="h-5 w-5 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+                      <span className="text-sm text-muted-foreground">Analyzing oceanographic data...</span>
                     </div>
                   </div>
                 </div>
@@ -239,6 +197,7 @@ export function Chat({ className, messages: externalMessages, onMessagesChange }
         </div>
       </div>
 
+      {/* ✅ Input Section */}
       <div className="border-t border-border/30 bg-card/50 backdrop-blur-sm">
         <div className="p-4 space-y-3">
           <div className="flex gap-3">
@@ -247,8 +206,8 @@ export function Chat({ className, messages: externalMessages, onMessagesChange }
                 ref={inputRef}
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
-                placeholder="Ask about ocean temperature, salinity, float data, or any oceanographic question..."
-                className="pr-12 h-12 bg-background/80 border-border/50 focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all duration-200"
+                placeholder="Ask about temperature, salinity, ARGO floats..."
+                className="pr-12 h-12"
                 onKeyPress={handleKeyPress}
                 disabled={isLoading}
               />
@@ -258,7 +217,7 @@ export function Chat({ className, messages: externalMessages, onMessagesChange }
             </div>
             <Button
               onClick={handleSendMessage}
-              className={`h-12 px-6 transition-all duration-200 ${
+              className={`h-12 px-6 ${
                 !inputValue.trim() || isLoading
                   ? "bg-muted text-muted-foreground cursor-not-allowed opacity-50"
                   : "bg-gradient-ocean hover:shadow-lg hover:shadow-primary/25 hover:scale-105"
@@ -274,18 +233,6 @@ export function Chat({ className, messages: externalMessages, onMessagesChange }
                 </>
               )}
             </Button>
-          </div>
-
-          <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <div className="flex items-center gap-4">
-              <span>
-                💡 Try: &quot;temperature&quot;, &quot;salinity&quot;, &quot;map floats&quot;, &quot;compare regions&quot;
-              </span>
-            </div>
-            <div className="flex items-center gap-1">
-              <kbd className="px-2 py-1 bg-muted rounded text-xs">Enter</kbd>
-              <span>to send</span>
-            </div>
           </div>
         </div>
       </div>

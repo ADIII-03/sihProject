@@ -14,47 +14,47 @@ export function HelpModal({ isOpen, onClose }: HelpModalProps) {
   const exampleQueries = [
     {
       icon: <BarChart3 className="h-5 w-5 text-chart-1" />,
-      category: "Depth Profiles",
+      category: "Natural Language Queries",
       queries: [
-        "Show me salinity profile near the equator in March 2023",
-        "Display temperature depth profile for the Atlantic",
-        "Generate oxygen profile for coordinates 30°N, 40°W",
+        "Show salinity profile for float 1001 from Jan 2023 to Mar 2023",
+        "Display temperature vs pressure for platform 1002",
+        "Compare oxygen variation of two floats in Arabian Sea",
       ],
     },
     {
       icon: <TrendingUp className="h-5 w-5 text-chart-2" />,
-      category: "Comparisons",
+      category: "View Profile",
       queries: [
-        "Compare oxygen levels in Arabian Sea vs Bay of Bengal",
-        "Show temperature differences between Pacific and Atlantic",
-        "Compare salinity profiles for summer vs winter",
+        "Select a platform number to view salinity & temperature variation vs pressure",
+        "Filter by cycle number and date range for detailed profiling",
+        "Explore float profiles even without platform number by selecting nearest location",
       ],
     },
     {
       icon: <TrendingUp className="h-5 w-5 text-chart-3" />,
-      category: "Time Series",
+      category: "Comparison",
       queries: [
-        "Display temperature time series for the Pacific Ocean",
-        "Show chlorophyll trends over the past year",
-        "Generate salinity time series for the Mediterranean",
+        "Compare salinity vs pressure between two platform numbers",
+        "Compare temperature variation using Plotly charts",
+        "Compare profiles for nearby floats if platform number not available",
       ],
     },
     {
-      icon: <Grid3X3 className="h-5 w-5 text-chart-4" />,
-      category: "Heatmaps",
+      icon: <Map className="h-5 w-5 text-chart-4" />,
+      category: "Map Interaction",
       queries: [
-        "Create a heatmap of chlorophyll distribution",
-        "Show temperature heatmap across depth and time",
-        "Generate salinity distribution heatmap",
+        "Click on map to select a location and see nearest float data",
+        "Inspect latest float positions and their measurements",
+        "All floats’ last known locations are visible with platform numbers",
       ],
     },
     {
-      icon: <Map className="h-5 w-5 text-chart-5" />,
-      category: "Maps",
+      icon: <Grid3X3 className="h-5 w-5 text-chart-5" />,
+      category: "3D Float Map",
       queries: [
-        "Map float locations in the Atlantic Ocean",
-        "Show oceanographic buoy positions with trajectories",
-        "Display float network in the Pacific region",
+        "Visualize the last location of each float in 3D using Cesium",
+        "Click on a float to see its platform number and basic info",
+        "Pan, zoom, and rotate the globe to explore float locations interactively",
       ],
     },
   ]
@@ -77,8 +77,9 @@ export function HelpModal({ isOpen, onClose }: HelpModalProps) {
               <h3 className="text-lg font-semibold">Getting Started</h3>
             </div>
             <p className="text-muted-foreground">
-              Ask natural language questions about oceanographic data and get interactive visualizations. The AI will
-              analyze your query and generate appropriate charts, maps, or data displays.
+              Ask natural language questions about oceanographic floats. You can explore float profiles, compare
+              data, select locations on maps, view latest float positions, and interact with 3D maps. The AI will
+              generate interactive charts, maps, and visualizations in response to your query.
             </p>
           </div>
 
@@ -94,10 +95,7 @@ export function HelpModal({ isOpen, onClose }: HelpModalProps) {
                     <div
                       key={queryIndex}
                       className="p-3 rounded-lg bg-muted/50 border border-border/20 text-sm cursor-pointer hover:bg-muted/70 transition-colors"
-                      onClick={() => {
-                        // Copy to clipboard or trigger query
-                        navigator.clipboard.writeText(query)
-                      }}
+                      onClick={() => navigator.clipboard.writeText(query)}
                     >
                       &quot;{query}&quot;
                     </div>
@@ -113,25 +111,26 @@ export function HelpModal({ isOpen, onClose }: HelpModalProps) {
               <div className="space-y-2">
                 <h4 className="font-medium">Interactive Visualizations</h4>
                 <p className="text-sm text-muted-foreground">
-                  Charts and maps are fully interactive with zoom, pan, and hover details.
+                  Plotly charts and maps are fully interactive with zoom, pan, and hover details.
                 </p>
               </div>
               <div className="space-y-2">
                 <h4 className="font-medium">Data Export</h4>
                 <p className="text-sm text-muted-foreground">
-                  Download visualization data as JSON or CSV files for further analysis.
+                  Download float profile or comparison data as CSV or JSON for further analysis.
                 </p>
               </div>
               <div className="space-y-2">
-                <h4 className="font-medium">Fullscreen Mode</h4>
+                <h4 className="font-medium">Map & 3D Integration</h4>
                 <p className="text-sm text-muted-foreground">
-                  Expand any visualization to fullscreen for detailed examination.
+                  Use Mapbox to pick locations and see nearest floats. Explore the 3D Cesium map for the latest
+                  float positions and platform numbers.
                 </p>
               </div>
               <div className="space-y-2">
-                <h4 className="font-medium">Real-time Processing</h4>
+                <h4 className="font-medium">Comparison Mode</h4>
                 <p className="text-sm text-muted-foreground">
-                  Queries are processed in real-time with live oceanographic data.
+                  Compare multiple floats side-by-side or explore variations even without platform numbers.
                 </p>
               </div>
             </div>
@@ -141,4 +140,3 @@ export function HelpModal({ isOpen, onClose }: HelpModalProps) {
     </div>
   )
 }
-

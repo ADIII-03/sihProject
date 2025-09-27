@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import dynamic from "next/dynamic";
+import { useEffect, useRef, useState } from "react";
 import * as Cesium from "cesium";
 import "cesium/Build/Cesium/Widgets/widgets.css";
 
@@ -16,84 +15,94 @@ interface ArgoMapProps {
   height?: string | number;
 }
 
-export default function ArgoMap({
-  width = "100%",
-  height = "100vh",
-}: ArgoMapProps): JSX.Element {
+export default function ArgoMap({ width = "100%", height = "100vh" }: ArgoMapProps) {
   const mapRef = useRef<HTMLDivElement | null>(null);
+  const [floats, setFloats] = useState<Float[]>([]);
 
-  const floats: Float[] = [
-    { platform_number: "1001", latitude: 28.6, longitude: 77.2 }, // Delhi
-    { platform_number: "1002", latitude: 19.0, longitude: 72.8 }, // Mumbai
-    { platform_number: "1003", latitude: 13.0, longitude: 80.2 }, // Chennai
-    { platform_number: "1004", latitude: 10.0, longitude: 70.0 }, // Indian Ocean
-    { platform_number: "1005", latitude: -5.0, longitude: 73.0 }, // Indian Ocean south
-  ];
-
+  // Fetch latest floats
   useEffect(() => {
-    if (!mapRef.current) return;
+    const fetchFloats = async () => {
+      try {
+        const res = await fetch("/api/floats");
+        const data = await res.json();
+        const cleanData = (data.floats ?? []).map((f: any) => ({
+          platform_number: f.platform_number,
+          latitude: Number(f.latitude),
+          longitude: Number(f.longitude),
+        }));
+        setFloats(cleanData);
+      } catch (err) {
+        console.error("Failed to fetch floats:", err);
+      }
+    };
+    fetchFloats();
+  }, []);
+
+  // Initialize Cesium
+  useEffect(() => {
+    if (!mapRef.current || floats.length === 0) return;
 
     (window as any).CESIUM_BASE_URL = "/cesium";
     Cesium.Ion.defaultAccessToken = process.env.NEXT_PUBLIC_CESIUM_ION_TOKEN ?? "";
 
-    const initCesium = async () => {
-      const isMobile = /Mobi|Android/i.test(navigator.userAgent);
+    const viewer = new Cesium.Viewer(mapRef.current, {
+      baseLayerPicker: false,
+      geocoder: false,
+      sceneModePicker: false,
+      fullscreenButton: false,
+      navigationHelpButton: false,
+      timeline: false,
+      animation: false,
+      infoBox: true, // Enable infoBox
+    });
 
-      const terrainProvider = isMobile
-        ? new Cesium.EllipsoidTerrainProvider() // light terrain for mobile
-        : await Cesium.createWorldTerrainAsync(); // high-res for desktop
+    const dataSource = new Cesium.CustomDataSource("floats");
 
-      const viewer = new Cesium.Viewer(mapRef.current!, {
-        terrainProvider,
-        baseLayerPicker: false,
-        geocoder: false,
-        sceneModePicker: false,
-        fullscreenButton: false,
-        navigationHelpButton: false,
-        timeline: false,
-        animation: false,
-        infoBox: true,
+    floats.forEach((float) => {
+      dataSource.entities.add({
+        id: float.platform_number,
+        name: `Float ${float.platform_number}`,
+        position: Cesium.Cartesian3.fromDegrees(float.longitude, float.latitude),
+        point: {
+          pixelSize: 12,
+          color: Cesium.Color.ORANGE,
+          outlineColor: Cesium.Color.BLACK,
+          outlineWidth: 2,
+        },
+        label: {
+          text: String(float.platform_number),
+          font: "14px sans-serif",
+          fillColor: Cesium.Color.WHITE,
+          style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+          outlineWidth: 2,
+          verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+          pixelOffset: new Cesium.Cartesian2(0, -14),
+        },
+        description: `Platform Number: ${float.platform_number}`, // InfoBox content
       });
+    });
 
-      // Use a CustomDataSource for efficient entity rendering
-      const dataSource = new Cesium.CustomDataSource("floats");
-      floats.forEach((float) => {
-        dataSource.entities.add({
-          id: float.platform_number,
-          name: `Float ${float.platform_number}`,
-          position: Cesium.Cartesian3.fromDegrees(float.longitude, float.latitude),
-          point: {
-            pixelSize: isMobile ? 8 : 12,
-            color: Cesium.Color.ORANGE,
-            outlineColor: Cesium.Color.BLACK,
-            outlineWidth: 2,
-          },
-          label: {
-            text: float.platform_number,
-            font: isMobile ? "10px sans-serif" : "14px sans-serif",
-            fillColor: Cesium.Color.WHITE,
-            style: Cesium.LabelStyle.FILL_AND_OUTLINE,
-            outlineWidth: 2,
-            verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
-            pixelOffset: new Cesium.Cartesian2(0, -14),
-          },
-          description: `Float ${float.platform_number}`,
-        });
-      });
-      viewer.dataSources.add(dataSource);
+    viewer.dataSources.add(dataSource);
 
-      // Center camera over India
+    // Click handler to show infoBox
+    const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
+    handler.setInputAction((click) => {
+      const picked = viewer.scene.pick(click.position);
+      if (picked && picked.id) {
+        viewer.selectedEntity = picked.id; // Automatically shows description in infoBox
+      }
+    }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
+
+    // Center camera
+    if (floats.length > 0) {
+      const f = floats[0];
       viewer.camera.setView({
-        destination: Cesium.Cartesian3.fromDegrees(78.0, 20.0, isMobile ? 800_000 : 500_000),
+        destination: Cesium.Cartesian3.fromDegrees(f.longitude, f.latitude, 800_000),
       });
+    }
 
-      return () => {
-        viewer.destroy();
-      };
-    };
-
-    initCesium().catch((err) => console.error("Cesium init failed:", err));
-  }, []);
+    return () => viewer.destroy();
+  }, [floats]);
 
   return (
     <div

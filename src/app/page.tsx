@@ -5,20 +5,20 @@ import { Button } from "@/components/ui/button"
 import { Chat, type Message } from "@/components/Chat"
 import { HelpModal } from "@/components/ui/help-modal"
 import { Sidebar } from "@/components/ui/sidebar"
-import dynamic from "next/dynamic";
-const ArgoMap = dynamic(() => import("../components/ArgoMap"), { ssr: false });
+import dynamic from "next/dynamic"
+import { Waves, Compass, BarChart3, Map, Sun, Moon, HelpCircle, History, Sparkles } from "lucide-react"
 
-import ViewProfilePage from "@/app/ViewProfilePage/page"
+const ArgoMap = dynamic(() => import("../components/ArgoMap"), { ssr: false })
 import ComparePage from "@/app/ComparePage/page"
+import EnhancedViewProfilePage from "@/app/ViewProfilePage/page"
 
-export default function OceanicChatApp() {
+export default function FloatAI() {
   const [isDark, setIsDark] = useState(false)
   const [showHelp, setShowHelp] = useState(false)
   const [showSidebar, setShowSidebar] = useState(false)
   const [mounted, setMounted] = useState(false)
   const [messages, setMessages] = useState<Message[]>([])
-  const [currentPage, setCurrentPage] = useState<"chat" | "profile" | "compare" | "map">("chat");
-
+  const [currentPage, setCurrentPage] = useState<"chat" | "profile" | "compare" | "map">("chat")
 
   useEffect(() => {
     setMounted(true)
@@ -41,130 +41,189 @@ export default function OceanicChatApp() {
   if (!mounted) return null
 
   return (
-    <div className="min-h-screen w-full bg-ocean-gradient-animated particle-container text-foreground dark:text-white transition-colors duration-500">
-      {/* Background particles */}
-      <div className="particle animate-particle-float"></div>
-      <div className="particle animate-particle-float"></div>
-      <div className="particle animate-particle-float"></div>
-      <div className="particle animate-particle-float"></div>
-      <div className="particle animate-particle-float"></div>
+    <div className="min-h-screen w-full ocean-gradient relative overflow-hidden">
+      {/* Animated background elements */}
+      <div className="absolute inset-0 opacity-30">
+        <div className="absolute top-20 left-10 w-32 h-32 rounded-full bg-accent/20 blur-3xl float-animation"></div>
+        <div
+          className="absolute top-40 right-20 w-24 h-24 rounded-full bg-primary/20 blur-2xl float-animation"
+          style={{ animationDelay: "2s" }}
+        ></div>
+        <div
+          className="absolute bottom-32 left-1/4 w-40 h-40 rounded-full bg-secondary/20 blur-3xl float-animation"
+          style={{ animationDelay: "4s" }}
+        ></div>
+        <div
+          className="absolute bottom-20 right-1/3 w-28 h-28 rounded-full bg-accent/20 blur-2xl float-animation"
+          style={{ animationDelay: "1s" }}
+        ></div>
+      </div>
 
       {/* Header */}
-      <header className="sticky top-0 z-40 glass-card border-b border-border/30">
-        <div className="container mx-auto px-4 sm:px-6 py-4 flex flex-col sm:flex-row items-center sm:justify-between gap-3">
-          <div className="flex items-center gap-3 flex-wrap sm:flex-nowrap">
-            <div className="relative group">
-              <div className="w-12 h-12 rounded-2xl bg-ocean-gradient flex items-center justify-center shadow-2xl animate-pulse-glow hover-lift interactive-scale">
-                <span className="text-white text-xl animate-ocean-wave">🌊</span>
+      <header className="sticky top-0 z-50 glass-ocean border-b border-border/30 backdrop-blur-2xl">
+        <div className="container mx-auto px-6 py-4">
+          <div className="flex items-center justify-between">
+            {/* Logo and Brand */}
+            <div className="flex items-center gap-4">
+              <div className="relative group">
+                <div className="w-14 h-14 rounded-2xl ocean-deep-gradient flex items-center justify-center shadow-2xl transition-all duration-300 group-hover:scale-105 ripple-effect">
+                  <Waves className="w-7 h-7 text-primary-foreground wave-animation" />
+                </div>
+                <div className="absolute -top-1 -right-1 w-4 h-4 bg-accent rounded-full animate-pulse shadow-lg"></div>
               </div>
-              <div className="absolute -top-1 -right-1 w-4 h-4 bg-accent rounded-full animate-pulse shadow-lg"></div>
-              <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-primary/20 to-accent/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-xl"></div>
+              <div>
+                <h1 className="text-3xl font-bold text-ocean-gradient tracking-tight">FLOATAI</h1>
+                <p className="text-sm text-muted-foreground font-medium shimmer-wave">
+                  {"Intelligent Ocean Analytics Platform"}
+                </p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-heading font-bold text-foreground">Oceanic Data Explorer</h1>
-              <p className="text-xs sm:text-sm text-muted-foreground font-medium animate-shimmer-flow">
-                Advanced Marine Science Analytics Platform
-              </p>
+
+            {/* Navigation */}
+            <nav className="hidden md:flex items-center gap-2">
+              <Button
+                variant={currentPage === "chat" ? "default" : "ghost"}
+                size="sm"
+                className="h-11 px-6 glass-ocean transition-all duration-300 hover:scale-105 group"
+                onClick={() => setCurrentPage("chat")}
+              >
+                <Sparkles className="w-4 h-4 mr-2 group-hover:text-accent transition-colors" />
+                <span className="font-medium">Chat</span>
+              </Button>
+              <Button
+                variant={currentPage === "profile" ? "default" : "ghost"}
+                size="sm"
+                className="h-11 px-6 glass-ocean transition-all duration-300 hover:scale-105 group"
+                onClick={() => setCurrentPage("profile")}
+              >
+                <Compass className="w-4 h-4 mr-2 group-hover:text-accent transition-colors" />
+                <span className="font-medium">Profile</span>
+              </Button>
+              <Button
+                variant={currentPage === "compare" ? "default" : "ghost"}
+                size="sm"
+                className="h-11 px-6 glass-ocean transition-all duration-300 hover:scale-105 group"
+                onClick={() => setCurrentPage("compare")}
+              >
+                <BarChart3 className="w-4 h-4 mr-2 group-hover:text-accent transition-colors" />
+                <span className="font-medium">Analytics</span>
+              </Button>
+              <Button
+                variant={currentPage === "map" ? "default" : "ghost"}
+                size="sm"
+                className="h-11 px-6 glass-ocean transition-all duration-300 hover:scale-105 group"
+                onClick={() => setCurrentPage("map")}
+              >
+                <Map className="w-4 h-4 mr-2 group-hover:text-accent transition-colors" />
+                <span className="font-medium">Explorer</span>
+              </Button>
+            </nav>
+
+            {/* Controls */}
+            <div className="flex items-center gap-2">
+              {currentPage === "chat" && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-11 px-4 glass-ocean transition-all duration-300 hover:scale-105"
+                  onClick={() => setShowSidebar(true)}
+                >
+                  <History className="w-4 h-4 mr-2" />
+                  <span className="hidden sm:inline">History</span>
+                </Button>
+              )}
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-11 px-4 glass-ocean transition-all duration-300 hover:scale-105"
+                onClick={toggleTheme}
+              >
+                {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-11 px-4 glass-ocean border-primary/30 transition-all duration-300 hover:scale-105 bg-transparent"
+                onClick={() => setShowHelp(true)}
+              >
+                <HelpCircle className="w-4 h-4 mr-2" />
+                <span className="hidden sm:inline">Help</span>
+              </Button>
             </div>
           </div>
 
-          {/* Navigation */}
-          <nav className="flex flex-wrap sm:flex-nowrap items-center gap-2 mt-2 sm:mt-0 w-full sm:w-auto justify-center">
+          {/* Mobile Navigation */}
+          <div className="md:hidden mt-4 flex gap-2 overflow-x-auto pb-2">
             <Button
               variant={currentPage === "chat" ? "default" : "ghost"}
               size="sm"
-              className="h-10 px-4 w-full sm:w-auto transition-all duration-300 hover-lift interactive-scale border border-border/30 bg-background/80 text-foreground hover:bg-primary hover:text-primary-foreground"
+              className="h-10 px-4 glass-ocean transition-all duration-300 whitespace-nowrap"
               onClick={() => setCurrentPage("chat")}
             >
-              <span className="mr-2 text-lg">💬</span>
-              <span className="hidden sm:inline font-medium">Chat</span>
+              <Sparkles className="w-4 h-4 mr-2" />
+              Chat
             </Button>
             <Button
               variant={currentPage === "profile" ? "default" : "ghost"}
               size="sm"
-              className="h-10 px-4 w-full sm:w-auto transition-all duration-300 hover-lift interactive-scale border border-border/30 bg-background/80 text-foreground hover:bg-primary hover:text-primary-foreground"
+              className="h-10 px-4 glass-ocean transition-all duration-300 whitespace-nowrap"
               onClick={() => setCurrentPage("profile")}
             >
-              <span className="mr-2 text-lg">🌊</span>
-              <span className="hidden sm:inline font-medium">View Profile</span>
+              <Compass className="w-4 h-4 mr-2" />
+              Profile
             </Button>
             <Button
               variant={currentPage === "compare" ? "default" : "ghost"}
               size="sm"
-              className="h-10 px-4 w-full sm:w-auto transition-all duration-300 hover-lift interactive-scale border border-border/30 bg-background/80 text-foreground hover:bg-primary hover:text-primary-foreground"
+              className="h-10 px-4 glass-ocean transition-all duration-300 whitespace-nowrap"
               onClick={() => setCurrentPage("compare")}
             >
-              <span className="mr-2 text-lg">📊</span>
-              <span className="hidden sm:inline font-medium">Compare</span>
+              <BarChart3 className="w-4 h-4 mr-2" />
+              Analytics
             </Button>
             <Button
-  variant={currentPage === "map" ? "default" : "ghost"}
-  size="sm"
-  className="h-10 px-4 w-full sm:w-auto transition-all duration-300 hover-lift interactive-scale border border-border/30 bg-background/80 text-foreground hover:bg-primary hover:text-primary-foreground"
-  onClick={() => setCurrentPage("map")}
->
-  <span className="mr-2 text-lg">🗺️</span>
-  <span className="hidden sm:inline font-medium">Map</span>
-</Button>
-
-          </nav>
-
-          {/* Header Controls */}
-          <div className="flex items-center gap-2 mt-2 sm:mt-0 flex-wrap sm:flex-nowrap">
-            {currentPage === "chat" && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-10 px-4 glass-card border-0 hover-glow transition-all duration-300 interactive-scale"
-                onClick={() => setShowSidebar(true)}
-              >
-                <span className="mr-2 text-lg">🕒</span>
-                <span className="hidden sm:inline font-medium">History</span>
-              </Button>
-            )}
-            <Button
-              variant="ghost"
+              variant={currentPage === "map" ? "default" : "ghost"}
               size="sm"
-              className="h-10 px-4 glass-card border-0 hover-glow transition-all duration-300 interactive-scale"
-              onClick={toggleTheme}
+              className="h-10 px-4 glass-ocean transition-all duration-300 whitespace-nowrap"
+              onClick={() => setCurrentPage("map")}
             >
-              <span className="text-lg">{isDark ? "☀️" : "🌙"}</span>
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-10 px-4 glass-card border-primary/30 hover-glow transition-all duration-300 interactive-scale bg-transparent"
-              onClick={() => setShowHelp(true)}
-            >
-              <span className="mr-2 text-lg">❓</span>
-              <span className="hidden sm:inline font-medium">Help</span>
+              <Map className="w-4 h-4 mr-2" />
+              Explorer
             </Button>
           </div>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="relative px-4 sm:px-6 py-6">
+      <main className="relative px-6 py-8">
         {currentPage === "chat" && (
           <div className="max-w-6xl mx-auto">
-            <div className="mb-8 text-center">
-              <div className="inline-flex items-center gap-3 px-6 py-3 rounded-full bg-slate-800 border border-slate-700 mb-4 hover-glow transition-all duration-300 shadow-lg">
-                <div className="w-3 h-3 bg-white rounded-full animate-pulse shadow-lg"></div>
-                <span className="text-sm font-semibold text-white">AI-Powered Ocean Analytics</span>
-                <div className="w-3 h-3 bg-white rounded-full animate-pulse shadow-lg" style={{ animationDelay: "0.5s" }}></div>
+            {/* Hero Section */}
+            <div className="text-center mb-12">
+              <div className="inline-flex items-center gap-3 px-8 py-4 rounded-full glass-ocean border border-border/30 mb-6 shimmer-wave">
+                <div className="w-3 h-3 bg-accent rounded-full animate-pulse"></div>
+                <span className="text-lg font-semibold text-foreground">{"AI-Powered Ocean Intelligence"}</span>
+                <div className="w-3 h-3 bg-primary rounded-full animate-pulse" style={{ animationDelay: "0.5s" }}></div>
               </div>
-              <h2 className="text-xl sm:text-2xl font-heading font-bold mb-2 text-foreground">Welcome to Ocean Analytics</h2>
-              <p className="text-sm sm:text-lg text-muted-foreground max-w-3xl mx-auto leading-relaxed">
-                Explore oceanographic data through natural language queries. Ask about temperature profiles, salinity
-                measurements, float trajectories, and discover insights from the world&apos oceans.
+              <h2 className="text-5xl md:text-6xl font-bold text-balance mb-4 text-ocean-gradient">
+                {"Dive Deep into"}
+                <br />
+                {"Ocean Analytics"}
+              </h2>
+              <p className="text-xl text-muted-foreground max-w-2xl mx-auto text-pretty">
+                {
+                  "Harness the power of AI to explore, analyze, and understand our oceans like never before. Float through data with intelligent insights."
+                }
               </p>
             </div>
+
+            {/* Chat Interface */}
             <div className="relative">
-              <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-accent/10 rounded-3xl blur-xl"></div>
-              <div className="relative glass-card rounded-3xl shadow-2xl overflow-hidden border border-border/30 hover-lift transition-all duration-500">
-                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary via-accent to-primary animate-shimmer-flow"></div>
+              <div className="absolute inset-0 ocean-deep-gradient rounded-3xl blur-3xl opacity-20"></div>
+              <div className="relative glass-ocean rounded-3xl shadow-2xl overflow-hidden border border-border/30 transition-all duration-500 hover:shadow-3xl">
+                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary via-accent to-secondary shimmer-wave"></div>
                 <Chat
-                  className="h-[calc(100vh-320px)] min-h-[400px] sm:min-h-[600px]"
+                  className="h-[calc(100vh-400px)] min-h-[500px]"
                   messages={messages}
                   onMessagesChange={setMessages}
                 />
@@ -174,31 +233,38 @@ export default function OceanicChatApp() {
         )}
 
         {currentPage === "profile" && (
-          <div className="container mx-auto px-2 sm:px-6 py-4">
-            <ViewProfilePage />
+          <div className="container mx-auto">
+            <div className="glass-ocean rounded-3xl p-8 border border-border/30">
+              <EnhancedViewProfilePage />
+            </div>
           </div>
         )}
 
         {currentPage === "compare" && (
-          <div className="container mx-auto px-2 sm:px-6 py-4">
-            <ComparePage />
+          <div className="container mx-auto">
+            <div className="glass-ocean rounded-3xl p-8 border border-border/30">
+              <ComparePage />
+            </div>
           </div>
         )}
+
         {currentPage === "map" && (
-  <div className="container mx-auto px-2 sm:px-6 py-4">
-    <ArgoMap />
-  </div>
-)}
+          <div className="container mx-auto">
+            <div className="glass-ocean rounded-3xl p-8 border border-border/30">
+              <ArgoMap />
+            </div>
+          </div>
+        )}
 
         {/* Floating Help Button */}
         {currentPage === "chat" && (
           <Button
             onClick={() => setShowHelp(true)}
-            className="fixed bottom-8 right-8 h-16 w-16 rounded-full shadow-2xl bg-ocean-gradient hover:shadow-primary/30 transition-all duration-500 hover:scale-110 z-30 glass-card border-2 border-white/30 animate-pulse-glow interactive-scale"
+            className="fixed bottom-8 right-8 h-16 w-16 rounded-full shadow-2xl ocean-deep-gradient hover:shadow-accent/30 transition-all duration-500 hover:scale-110 z-30 border-2 border-accent/30 group"
             size="icon"
           >
-            <span className="text-white text-2xl animate-ocean-wave">❓</span>
-            <div className="absolute inset-0 rounded-full bg-gradient-to-r from-primary/20 to-accent/20 opacity-0 hover:opacity-100 transition-opacity duration-300 blur-lg"></div>
+            <HelpCircle className="w-6 h-6 text-primary-foreground group-hover:scale-110 transition-transform" />
+            <div className="absolute inset-0 rounded-full bg-accent/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-lg"></div>
           </Button>
         )}
       </main>
